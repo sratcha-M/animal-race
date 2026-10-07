@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Kanit", ui-sans-serif, system-ui, sans-serif;
+}
+
+html, body, #root { height: 100%; }
+body { background: #fff4f8; }
+
+/* สัตว์วิ่ง: ขาดุ๊กดิ๊ก + ตัวเด้ง + หางแกว่ง */
+.critter .leg, .critter .tail { transform-box: view-box; }
+.critter.running .leg-a { animation: paw .26s ease-in-out infinite alternate; }
+.critter.running .leg-b { animation: paw .26s ease-in-out infinite alternate-reverse; }
+.critter.running .critter-body { animation: bob .13s ease-in-out infinite alternate; }
+.critter .tail { transform-origin: 30px 52px; }
+.critter.running .tail { animation: tail .26s ease-in-out infinite alternate; }
+.critter:not(.running) .eyes { animation: blink 4s infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes paw { from { transform: rotate(35deg); } to { transform: rotate(-35deg); } }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+@keyframes tail { from { transform: rotate(-14deg); } to { transform: rotate(12deg); } }
+@keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+/* ภาพสัตว์จาก AI: กระโดดดึ๋ง ๆ */
+.critter-img.running .critter-hop { animation: hop .28s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes hop { from { transform: translateY(0) rotate(-4deg) scaleY(.96); } to { transform: translateY(-10%) rotate(4deg) scaleY(1.03); } }
+
+.dust { opacity: 0; }
+.critter.running + .dust { animation: dust .4s linear infinite; }
+@keyframes dust { 0% { opacity: .55; transform: translateX(0) scale(.6); } 100% { opacity: 0; transform: translateX(-18px) scale(1.3); } }
+
+.pop { animation: pop .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.float { animation: float 2s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.confetti { position: absolute; top: -12px; width: 10px; height: 14px; border-radius: 2px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(105vh) rotate(720deg); } }
+
+.checker {
+  background-image:
+    linear-gradient(45deg, #111 25%, transparent 25%), linear-gradient(-45deg, #111 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #111 75%), linear-gradient(-45deg, transparent 75%, #111 75%);
+  background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0; background-color: #fff;
+}
+
+.cloud { animation: drift linear infinite; }
+@keyframes drift { from { transform: translateX(-30%); } to { transform: translateX(130vw); } }
+.stripe-lanes > div:nth-child(odd of .lane) .lane-bg { background: #ffe9c7; }
+.checker-pastel {
+  background-image:
+    linear-gradient(45deg, #ff8fb0 25%, transparent 25%), linear-gradient(-45deg, #ff8fb0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ff8fb0 75%), linear-gradient(-45deg, transparent 75%, #ff8fb0 75%);
+  background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0; background-color: #fff;
+}
+
+/* ===== เหตุการณ์ระหว่างวิ่ง ===== */
+.racer .critter { transition: transform .2s; }
+.racer .speed-lines, .racer .zzz { opacity: 0; }
+.racer[data-event="turbo"] .critter { filter: drop-shadow(0 0 6px #ffb703) drop-shadow(0 0 2px #ff6b8b); }
+.racer[data-event="turbo"] .critter .leg, .racer[data-event="turbo"] .critter .tail { animation-duration: .12s !important; }
+.racer[data-event="turbo"] .critter-hop { animation-duration: .14s !important; }
+.racer[data-event="turbo"] .speed-lines {
+  opacity: 1;
+  background: repeating-linear-gradient(180deg, transparent 0 5px, #ffb703 5px 7px, transparent 7px 12px);
+  mask-image: linear-gradient(90deg, transparent, #000);
+  animation: lines .15s linear infinite;
+}
+@keyframes lines { from { transform: translateX(6px); } to { transform: translateX(-6px); } }
+.racer[data-event="tired"] .critter .leg, .racer[data-event="tired"] .critter .tail { animation-duration: .6s !important; }
+.racer[data-event="tired"] .critter { filter: saturate(.6); }
+.racer[data-event="trip"] .critter { transform: rotate(-28deg) translateY(12%); }
+.racer[data-event="trip"] .critter *, .racer[data-event="nap"] .critter *, .racer[data-event="snack"] .critter * { animation-play-state: paused !important; }
+.racer[data-event="nap"] .critter { transform: rotate(-6deg) scaleY(.92); transform-origin: bottom; }
+.racer[data-event="nap"] .zzz { opacity: 1; animation: zzz 1s ease-in-out infinite; }
+@keyframes zzz { 0% { transform: translateY(0); opacity: .3; } 50% { opacity: 1; } 100% { transform: translateY(-10px); opacity: 0; } }
+.racer[data-event="snack"] .critter { animation: munch .25s ease-in-out infinite alternate; }
+@keyframes munch { to { transform: translateY(4%) rotate(4deg); } }
+.bubble { animation: pop .3s cubic-bezier(.2,1.6,.4,1) both; }
+
+.slowmo-badge { opacity: 0; transition: opacity .3s; }
+.track[data-slowmo="1"] .slowmo-badge { opacity: 1; animation: pulse .6s ease-in-out infinite alternate; }
+.track[data-slowmo="1"]::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 25;
+  box-shadow: inset 0 0 80px 20px rgba(99, 102, 241, .35);
+}
+@keyframes pulse { to { transform: scale(1.08); } }
