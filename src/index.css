@@ -117,3 +117,14 @@ body { background: #fff4f8; }
 .balloon-bob { animation: balloon-bob 2.2s ease-in-out infinite alternate; }
 .burst { animation: burst .45s ease-out forwards; }
 .trace { animation: dash 2.4s linear forwards; }
+
+@keyframes twinkle { 0%, 100% { opacity: .25; transform: scale(.7) rotate(0); } 50% { opacity: 1; transform: scale(1.2) rotate(20deg); } }
+@keyframes shred { 0% { transform: translate(0, 0) scale(.4) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(1.2) rotate(40deg); opacity: 0; } }
+@keyframes pop-text { 0% { transform: translateY(8px) scale(.5); opacity: 0; } 25% { transform: translateY(0) scale(1.15); opacity: 1; } 100% { transform: translateY(-14px) scale(1); opacity: 0; } }
+@keyframes cute-fall { 0% { transform: translate(-50%, 0) rotate(0); opacity: 1; } 22% { transform: translate(-50%, -14%) rotate(-10deg); } 100% { transform: translate(-50%, 430%) rotate(26deg); opacity: 0; } }
+@keyframes jitter { from { transform: translate(-2px, 0) rotate(-3deg); } to { transform: translate(2px, -2px) rotate(3deg); } }
+.twinkle { animation: twinkle 2.4s ease-in-out infinite; }
+.shred { animation: shred .9s ease-out forwards; }
+.pop-text { animation: pop-text 1.1s ease-out forwards; }
+.cute-fall { animation: cute-fall 1.9s cubic-bezier(.4, 0, .9, .6) forwards; }
+.balloon-jitter { animation-name: jitter !important; animation-direction: alternate; }
