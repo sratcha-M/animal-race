@@ -238,9 +238,9 @@ function GachaPhone({ g, me, mine, onSpin }) {
     const t = TIERS[result.tier]
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center" style={{ background: t.light }}>
-        <div className="text-lg font-extrabold" style={{ color: t.color }}>คุณได้ระดับ {t.label}!</div>
+        <div className="text-lg font-extrabold" style={{ color: t.color }}>{result.tier === 'none' ? 'ไข่เปล่า เสียใจด้วย' : `คุณได้ระดับ ${t.label}!`}</div>
         <div className="float w-44"><Animal animal={mine.animal} number={mine.num} running /></div>
-        <h1 className="pop text-4xl font-extrabold text-slate-800">{result.prize}</h1>
+        <h1 className="pop text-4xl font-extrabold text-slate-800">{result.prize ?? 'ไม่ได้รางวัลรอบนี้'}</h1>
         <p className="text-sm text-slate-500">{mine.name}</p>
       </main>
     )
