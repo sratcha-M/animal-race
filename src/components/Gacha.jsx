@@ -11,7 +11,29 @@ const TIERS = {
   bronze: { label: 'ทองแดง', color: '#b4683a', light: '#fde6d2' },
 }
 const PASTELS = ['#ff8fab', '#8ed1fc', '#a0e3b0', '#c3a6ff', '#ffd166', '#ffb38a']
-const DEFAULT_PRIZES = { gold: 'รางวัลใหญ่', silver: 'รางวัลรอง', bronze: 'รางวัลปลอบใจ' }
+const DEFAULT_PRIZES = {
+  gold: ['รางวัลใหญ่'],
+  silver: ['รางวัลรอง'],
+  bronze: ['รางวัลปลอบใจ'],
+}
+const KEY = 'animal-race:gacha-prizes'
+// รองรับค่าที่เคยบันทึกไว้แบบข้อความเดียวต่อระดับ
+function loadPrizes() {
+  const saved = load(KEY, {})
+  return Object.fromEntries(Object.keys(DEFAULT_PRIZES).map((k) => {
+    const v = Array.isArray(saved[k]) ? saved[k] : typeof saved[k] === 'string' ? [saved[k]] : DEFAULT_PRIZES[k]
+    const list = v.map((t) => String(t).trim()).filter(Boolean)
+    return [k, list.length ? list : DEFAULT_PRIZES[k]]
+  }))
+}
+// สุ่มของรางวัลจากรายการของระดับนั้น ให้ซ้ำกันน้อยที่สุด
+const prizePicker = () => {
+  const bag = {}
+  return (tier, list) => {
+    if (!bag[tier]?.length) bag[tier] = shuffle(list)
+    return bag[tier].pop()
+  }
+}
 
 // ทอง 1 ใบ, เงินประมาณ 1 ใน 3, ที่เหลือทองแดง แล้วสลับไข่กับชื่อ
 function deal(roster) {
@@ -27,10 +49,12 @@ export default function Gacha({ players, onBack }) {
   const [drawn, setDrawn] = useState([])
   const [opened, setOpened] = useState([]) // ผลที่เปิดไข่แล้ว แสดงด้านล่างทันที
   const [phase, setPhase] = useState('ready') // ready | rolling | egg | open
-  const [prizes, setPrizes] = useState(() => ({ ...DEFAULT_PRIZES, ...load('animal-race:gacha-prizes', {}) }))
+  const [prizes, setPrizes] = useState(loadPrizes)
+  const [draft, setDraft] = useState({ gold: '', silver: '', bronze: '' })
+  const picker = useRef(prizePicker())
   const timer = useRef(null)
   useEffect(() => () => clearTimeout(timer.current), [])
-  useEffect(() => save('animal-race:gacha-prizes', prizes), [prizes])
+  useEffect(() => save(KEY, prizes), [prizes])
 
   const current = drawn[drawn.length - 1]
   const left = eggs.length - drawn.length
@@ -41,7 +65,17 @@ export default function Gacha({ players, onBack }) {
     for (let k = 0; k < 6; k++) setTimeout(() => beep(300 + k * 40, 0.06, 'square', 0.05), k * 140)
     timer.current = setTimeout(() => { setDrawn((d) => [...d, eggs[d.length]]); setPhase('egg') }, 900)
   }
-  const open = () => { setPhase('open'); setOpened((o) => [...o, current]); fanfare() }
+  const open = () => {
+    const prize = picker.current(current.tier, prizes[current.tier])
+    setOpened((o) => [...o, { ...current, prize }]); setPhase('open'); fanfare()
+  }
+  const addPrize = (k) => {
+    const t = draft[k].trim()
+    if (!t || prizes[k].includes(t)) return
+    setPrizes({ ...prizes, [k]: [...prizes[k], t] }); setDraft({ ...draft, [k]: '' })
+  }
+  const removePrize = (k, i) => prizes[k].length > 1 && setPrizes({ ...prizes, [k]: prizes[k].filter((_, j) => j !== i) })
+  const resetPrizes = () => setPrizes(DEFAULT_PRIZES)
   const next = () => setPhase('ready')
   const restart = () => { setEggs(deal(roster)); setDrawn([]); setOpened([]); setPhase('ready') }
 
@@ -78,7 +112,7 @@ export default function Gacha({ players, onBack }) {
                 <div className="text-sm font-extrabold" style={{ color: TIERS[current.tier].color }}>ระดับ {TIERS[current.tier].label}</div>
                 <div className="mx-auto w-20"><Animal animal={current.player.animal} /></div>
                 <div className="text-2xl font-extrabold text-slate-800">{current.player.name}</div>
-                <div className="text-sm text-slate-600">{prizes[current.tier]}</div>
+                <div className="text-sm font-bold text-slate-700">{opened[opened.length - 1]?.prize}</div>
               </div>
             )}
             <div className={phase === 'egg' ? 'egg-out' : ''}>
@@ -105,23 +139,41 @@ export default function Gacha({ players, onBack }) {
               <span className="w-5 text-rose-400">{i + 1}</span>
               <span className="min-w-0 flex-1 truncate text-base font-extrabold">{d.player.name}</span>
               <span className="rounded-full px-2 py-0.5 text-xs font-extrabold text-white" style={{ background: TIERS[d.tier].color }}>{TIERS[d.tier].label}</span>
-              <span className="max-w-[40%] truncate text-xs text-slate-500">{prizes[d.tier]}</span>
+              <span className="max-w-[40%] truncate text-xs text-slate-500">{d.prize}</span>
             </li>
           ))}
         </ul>
       )}
 
-      {/* ของรางวัลแต่ละระดับ */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      {/* ของรางวัลแต่ละระดับ: เพิ่ม/ลบเองได้ และจำไว้ในเครื่องนี้สำหรับครั้งหน้า */}
+      <section className="mt-5 rounded-2xl bg-white/80 p-3 ring-1 ring-rose-100">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-extrabold text-rose-600">ของรางวัล</h3>
+          <span className="text-xs text-emerald-600">บันทึกอัตโนมัติในเครื่องนี้ ✓</span>
+        </div>
         {Object.entries(TIERS).map(([k, t]) => (
-          <label key={k} className="flex flex-col text-xs font-bold" style={{ color: t.color }}>
-            {t.label}
-            <input value={prizes[k]} maxLength={20} onChange={(e) => setPrizes({ ...prizes, [k]: e.target.value })}
-                   className="mt-0.5 rounded-lg border-2 bg-white px-2 py-1.5 text-sm font-normal text-slate-700 outline-none" style={{ borderColor: t.color }} />
-          </label>
+          <div key={k} className="mb-3">
+            <div className="mb-1 text-sm font-extrabold" style={{ color: t.color }}>{t.label}</div>
+            <ul className="mb-1.5 flex flex-wrap gap-1.5">
+              {prizes[k].map((text, i) => (
+                <li key={text} className="flex items-center gap-1 rounded-full py-0.5 pl-3 pr-1 text-sm font-semibold text-slate-700" style={{ background: t.light, boxShadow: `inset 0 0 0 1.5px ${t.color}` }}>
+                  {text}
+                  <button onClick={() => removePrize(k, i)} disabled={prizes[k].length < 2} aria-label={`ลบ ${text}`} className="grid h-5 w-5 place-items-center rounded-full text-slate-500 hover:bg-white disabled:opacity-30">×</button>
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-1.5">
+              <input value={draft[k]} maxLength={24} placeholder={`เพิ่มรางวัลระดับ${t.label}`} aria-label={`เพิ่มรางวัลระดับ${t.label}`}
+                     onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addPrize(k) }}
+                     className="min-w-0 flex-1 rounded-lg border-2 bg-white px-2 py-1.5 text-sm outline-none" style={{ borderColor: t.color }} />
+              <button onClick={() => addPrize(k)} className="rounded-lg px-3 text-sm font-bold text-white" style={{ background: t.color }}>+ เพิ่ม</button>
+            </div>
+          </div>
         ))}
-      </div>
-
+        <button onClick={resetPrizes} className="text-xs text-slate-500 underline">คืนค่าเริ่มต้น</button>
+        <p className="mt-1 text-xs text-slate-500">ไข่แต่ละใบสุ่มของรางวัลจากรายการของระดับนั้น ถ้ามีหลายอย่างจะไม่ซ้ำกันจนกว่าจะครบ</p>
+      </section>
     </Shell>
   )
 }
