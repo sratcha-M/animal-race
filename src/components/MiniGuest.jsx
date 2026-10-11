@@ -69,6 +69,8 @@ export default function MiniGuest({ game, title, g, me, mine, players, send }) {
               <p className="mt-2 text-sm text-slate-500">ปลายทางของคุณคือ</p>
               <h2 className="pop text-4xl font-extrabold text-rose-600">{mineResult}</h2>
             </>
+          ) : g.going?.includes(me) ? (
+            <p className="mt-4 animate-pulse text-2xl font-extrabold text-rose-500">เส้นกำลังไหลลงไป... ลุ้น!</p>
           ) : (
             <button onClick={() => { send('ladder-go'); beep(700, 0.06, 'triangle') }} className="mt-4 w-full max-w-xs rounded-3xl bg-amber-400 px-6 py-6 text-3xl font-extrabold text-amber-950 shadow-xl active:scale-95">ปล่อยเส้นของฉัน!</button>
           )}
