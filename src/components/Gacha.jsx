@@ -254,191 +254,255 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
     return !o ? [{ p, empty: false }] : o.tier === 'none' ? [{ p, empty: true }] : []
   })
 
+  const [editTier, setEditTier] = useState('gold')
+  const et = tiersOn.includes(editTier) ? editTier : tiersOn[0]
+  const dealt = ['gold', 'silver', 'bronze', 'none'].map((k) => ({ k, n: eggs.filter((e) => e.tier === k).length })).filter((x) => x.n > 0)
+  const gotCount = (k) => opened.filter((o) => o.tier === k).length
+
+  // ---------- ส่วนประกอบหน้าจอ ----------
+  const cta = (label, onClick, disabled) => (
+    <button onClick={onClick} disabled={disabled}
+            className="w-full rounded-2xl bg-amber-300 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-[0_6px_0_#d99a06] transition active:translate-y-1 active:shadow-[0_2px_0_#d99a06] disabled:opacity-50">
+      {label}
+    </button>
+  )
+  const tray = 'relative mx-auto grid h-60 w-full place-items-center rounded-3xl bg-white/20 ring-1 ring-white/40 backdrop-blur-sm'
+
   return (
-    <Shell title="กาชาปอง" right={mode === 'solo' ? `เหลือ ${left} ไข่` : `${total} คน`} onBack={onBack}>
-      <div role="radiogroup" aria-label="วิธีเล่น" className="mb-2 grid grid-cols-3 gap-1.5">
-        {Object.entries(MODES).map(([k, v]) => (
-          <button key={k} onClick={() => resetAll(k)} aria-pressed={mode === k} disabled={k === 'phones' && !room}
-                  className={`rounded-xl px-1 py-1.5 text-sm font-bold ring-1 transition disabled:opacity-40 ${mode === k ? 'bg-rose-500 text-white ring-rose-500' : 'bg-white text-rose-600 ring-rose-200'}`}>
-            {v.label}<div className="text-[10px] font-normal leading-tight opacity-80">{v.desc}</div>
-          </button>
-        ))}
-      </div>
-      {!room && <p className="mb-2 text-center text-xs text-rose-900/60">โหมด "หมุนบนมือถือ" ต้องเปิดห้องออนไลน์ก่อน (กดปุ่มเปิดห้องที่หน้าตั้งค่าผู้เล่น)</p>}
-
-      {mode !== 'all' && (
-        <div className="relative mx-auto mt-1 w-full max-w-[18rem]">
-          <Machine rolling={phase === 'rolling'} left={mode === 'solo' ? left : roster.length - spun.length} />
-        </div>
-      )}
-
-      {/* ====== ทีละใบ ====== */}
-      {mode === 'solo' && (
-        <>
-          <div className="relative mx-auto -mt-1 grid h-52 w-full place-items-center">
-            {phase === 'ready' && <p className="text-sm text-rose-900/60">{left > 0 ? 'กดหมุนตู้ ไข่จะกลิ้งออกมา' : 'ไข่หมดตู้แล้ว'}</p>}
-            {phase === 'rolling' && <p className="text-sm font-bold text-rose-500">กำลังหมุน...</p>}
-            {soloStage && <Stage s={soloStage} />}
-          </div>
-          <div className="flex flex-col gap-2">
-            {phase === 'egg' && <BigButton onClick={openSolo}>เปิดไข่!</BigButton>}
-            {phase === 'open' && left > 0 && <BigButton onClick={() => setPhase('ready')}>เก็บไข่ต่อไป</BigButton>}
-            {phase === 'ready' && left > 0 && <BigButton onClick={turn}>หมุนตู้!</BigButton>}
-            {(phase === 'ready' || phase === 'open') && left < 1 && <BigButton onClick={() => resetAll()}>สับไข่ใหม่</BigButton>}
-          </div>
-        </>
-      )}
-
-      {/* ====== พร้อมกัน ====== */}
-      {mode === 'all' && (
-        <>
-          <div className="relative mx-auto w-full max-w-[14rem]"><Machine rolling={allPhase === 'rolling'} left={allPhase === 'ready' ? total : 0} /></div>
-          {allPhase === 'out' && (
-            <ul className="mt-2 grid grid-cols-2 gap-2" aria-label="ไข่ของแต่ละคน">
-              {eggs.map((e, i) => {
-                const o = opened.find((x) => x.player.id === e.player.id)
-                return (
-                  <li key={e.player.id} className="relative flex min-h-[9.5rem] flex-col items-center justify-end rounded-2xl bg-white/80 p-2 ring-1 ring-rose-100">
-                    {o ? <ResultCard e={o} className="w-full" /> : (
-                      <button onClick={() => openOne(e)} aria-label="เปิดไข่" className="egg-out flex flex-col items-center" style={{ animationDelay: `${i * 90}ms` }}>
-                        <Capsule shell={e.shell} className="w-20" />
-                        <span className="mt-1 text-xs font-bold text-rose-500">แตะเพื่อเปิด</span>
-                      </button>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-          <div className="mt-3 flex flex-col gap-2">
-            {allPhase === 'ready' && <BigButton onClick={spinAll}>ทุกคนหมุนพร้อมกัน!</BigButton>}
-            {allPhase === 'rolling' && <p className="text-center font-bold text-rose-500">กำลังหมุน...</p>}
-            {allPhase === 'out' && opened.length < total && <BigButton onClick={openAll}>เปิดไข่ทุกใบ</BigButton>}
-            {allPhase === 'out' && opened.length >= total && <BigButton onClick={() => resetAll()}>หมุนใหม่ทุกคน</BigButton>}
-          </div>
-        </>
-      )}
-
-      {/* ====== หมุนบนมือถือ ====== */}
-      {mode === 'phones' && (
-        <>
-          <div className="relative mx-auto -mt-1 grid h-52 w-full place-items-center">
-            {!stage && <p className="px-4 text-center text-sm text-rose-900/60">{spun.length ? 'รอเพื่อนคนต่อไปหมุน...' : 'ให้เพื่อนกดหมุนกาชาปองที่มือถือของตัวเอง ผลจะขึ้นที่จอนี้'}</p>}
-            {stage && <Stage s={stage} />}
-          </div>
-          <ul className="grid grid-cols-2 gap-1.5" aria-label="สถานะผู้เล่น">
-            {roster.map((p) => {
-              const did = spun.includes(p.id)
-              return (
-                <li key={p.id} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm ring-1 ${did ? 'bg-emerald-50 ring-emerald-200' : 'bg-white ring-rose-100'}`}>
-                  <span className="w-7 shrink-0"><Animal animal={p.animal} /></span>
-                  <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
-                  {did ? <span className="text-xs font-bold text-emerald-600">หมุนแล้ว</span>
-                    : p.remote ? <span className="text-xs text-slate-400">รอหมุน</span>
-                      : <button onClick={() => spinFor(p.id)} className="rounded-lg bg-amber-400 px-2 py-0.5 text-xs font-extrabold text-amber-950">หมุนให้</button>}
-                </li>
-              )
-            })}
-          </ul>
-          {spun.length >= roster.length && !busy && <div className="mt-3"><BigButton onClick={() => resetAll()}>เริ่มรอบใหม่</BigButton></div>}
-        </>
-      )}
-
-      {opened.length > 0 && (
-        <div className="mt-4 flex items-center justify-between gap-2">
-          <h3 className="font-extrabold text-rose-600">ผลรางวัล</h3>
-          <label className="flex items-center gap-1.5 text-xs text-slate-600">เรียงตาม
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-sm">
-              <option value="order">ลำดับที่เปิด</option>
-              <option value="name">ชื่อคน</option>
-              <option value="prize">ชื่อรางวัล</option>
-              <option value="tier">ระดับ</option>
-            </select>
-          </label>
-        </div>
-      )}
-      {opened.length > 0 && (
-        <ul className="mt-1.5 space-y-1 text-sm" aria-live="polite" aria-label="ผลที่เปิดแล้ว">
-          {sortedResults.map((d, i) => (
-            <li key={d.player.id} className="pop flex items-center gap-2 rounded-lg bg-white/90 px-3 py-2 ring-1 ring-rose-100">
-              <span className="w-5 text-rose-400">{i + 1}</span>
-              <span className="min-w-0 flex-1 truncate text-base font-extrabold">{d.player.name}</span>
-              <span className="rounded-full px-2 py-0.5 text-xs font-extrabold text-white" style={{ background: TIERS[d.tier].color }}>{TIERS[d.tier].label}</span>
-              <span className="max-w-[40%] truncate text-xs text-slate-500">{d.prize ?? 'ไข่เปล่า'}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* คนที่ยังไม่ได้รางวัล: ไข่เปล่า + ยังไม่ได้เปิด */}
-      {waiting.length > 0 && opened.length > 0 && (
-        <section className="mt-3 rounded-xl bg-white/70 p-3 ring-1 ring-slate-200" aria-label="คนที่ยังไม่ได้รางวัล">
-          <h3 className="mb-1.5 text-sm font-extrabold text-slate-600">ยังไม่ได้รางวัล ({waiting.length})</h3>
-          <ul className="flex flex-wrap gap-1.5">
-            {waiting.map(({ p, empty }) => (
-              <li key={p.id} className={`rounded-full px-3 py-0.5 text-sm font-semibold ${empty ? 'bg-slate-200 text-slate-600' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
-                {p.name} <span className="text-xs font-normal">{empty ? 'ไข่เปล่า' : 'ยังไม่เปิด'}</span>
-              </li>
+    <Shell wide title="กาชาปอง" right={mode === 'solo' ? `เหลือ ${left} ไข่` : `${total} คน`} onBack={onBack}>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:items-start">
+        {/* ===== ซ้าย: ตู้กาชาปอง ===== */}
+        <div className="flex flex-col gap-3">
+          <div role="radiogroup" aria-label="วิธีเล่น" className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
+            {Object.entries(MODES).map(([k, v]) => (
+              <button key={k} onClick={() => resetAll(k)} aria-pressed={mode === k} disabled={k === 'phones' && !room}
+                      className={`rounded-xl px-1 py-1.5 text-sm font-bold transition disabled:opacity-40 ${mode === k ? 'bg-rose-500 text-white shadow' : 'text-rose-600 hover:bg-rose-50'}`}>
+                {v.label}<div className="text-[10px] font-normal leading-tight opacity-80">{v.desc}</div>
+              </button>
             ))}
-          </ul>
-        </section>
-      )}
-
-      {/* ของรางวัลแต่ละระดับ: เพิ่ม/ลบเองได้ และจำไว้ในเครื่องนี้สำหรับครั้งหน้า */}
-      <section className="mt-5 rounded-2xl bg-white/80 p-3 ring-1 ring-rose-100">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="font-extrabold text-rose-600">ของรางวัล</h3>
-          <span className="text-xs text-emerald-600">บันทึกอัตโนมัติในเครื่องนี้ ✓</span>
-        </div>
-        <label className="mb-3 flex items-start gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="mt-1" checked={repeat} onChange={(e) => resetAll(mode, tiersOn, e.target.checked)} />
-          <span>ให้รางวัลซ้ำกันได้ <span className="block text-xs font-normal text-slate-500">ปิดไว้ = รางวัลแต่ละอย่างแจกได้แค่ 1 คน ถ้ารางวัลน้อยกว่าคน คนที่เหลือจะได้ไข่เปล่า (เปลี่ยนแล้วเริ่มรอบใหม่)</span></span>
-        </label>
-        <fieldset className="mb-3">
-          <legend className="mb-1 text-sm font-semibold text-slate-700">ระดับที่ใช้ <span className="text-xs font-normal text-slate-500">(เปลี่ยนแล้วเริ่มรอบใหม่ · ต้องเหลืออย่างน้อย 1 ระดับ)</span></legend>
-          <div className="flex flex-wrap gap-2">
-            {ORDER.map((k) => {
-              const on = tiersOn.includes(k)
-              return (
-                <label key={k} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1" style={{ color: TIERS[k].color, background: on ? TIERS[k].light : '#fff', '--tw-ring-color': TIERS[k].color }}>
-                  <input type="checkbox" checked={on} disabled={on && tiersOn.length === 1}
-                         onChange={() => resetAll(mode, ORDER.filter((x) => (x === k ? !on : tiersOn.includes(x))))} />
-                  {TIERS[k].label}
-                </label>
-              )
-            })}
           </div>
-        </fieldset>
-        {tiersOn.map((k) => {
-          const t = TIERS[k]
-          return (
-            <div key={k} className="mb-3">
-              <div className="mb-1 flex items-center justify-between">
-                <span className="text-sm font-extrabold" style={{ color: t.color }}>{t.label} <span className="text-xs font-normal text-slate-500">({prizes[k].length})</span></span>
-                <button onClick={() => setPrizes({ ...prizes, [k]: [...prizes[k]].sort((a, b) => a.localeCompare(b, 'th')) })} className="text-xs text-slate-500 underline">เรียงตามชื่อ ก-ฮ</button>
+          {!room && <p className="-mt-1 text-center text-xs text-rose-900/60">โหมด "หมุนบนมือถือ" ต้องเปิดห้องออนไลน์ก่อน (ปุ่มชวนเพื่อนที่หน้าตั้งค่าผู้เล่น)</p>}
+
+          <section className="relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-b from-fuchsia-500 via-rose-400 to-orange-300 p-4 shadow-xl ring-4 ring-white/70" aria-label="ตู้กาชาปอง">
+            <div className="pointer-events-none absolute -left-10 -top-10 -z-10 h-44 w-44 rounded-full bg-yellow-200/40 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-12 -right-10 -z-10 h-52 w-52 rounded-full bg-pink-200/40 blur-2xl" />
+            {/* ในตู้มีอะไรบ้าง */}
+            <ul className="mb-2 flex flex-wrap justify-center gap-1.5 text-xs font-extrabold" aria-label="ไข่ในตู้">
+              {dealt.map(({ k, n }) => (
+                <li key={k} className="rounded-full bg-white/90 px-2.5 py-0.5" style={{ color: TIERS[k].color }}>{TIERS[k].label} {n}</li>
+              ))}
+              <li className="rounded-full bg-black/25 px-2.5 py-0.5 text-white">{repeat ? 'รางวัลซ้ำได้' : 'รางวัลไม่ซ้ำ'}</li>
+            </ul>
+
+            {mode !== 'all' && (
+              <div className="relative mx-auto w-full max-w-[15rem] drop-shadow-[0_10px_14px_rgba(120,20,60,.35)]">
+                <Machine rolling={phase === 'rolling'} left={mode === 'solo' ? left : roster.length - spun.length} />
               </div>
-              <ul className="mb-1.5 flex flex-wrap gap-1.5">
-                {prizes[k].map((text, i) => (
-                  <li key={text} className="flex items-center gap-1 rounded-full py-0.5 pl-3 pr-1 text-sm font-semibold text-slate-700" style={{ background: t.light, boxShadow: `inset 0 0 0 1.5px ${t.color}` }}>
-                    {text}
-                    <button onClick={() => removePrize(k, i)} disabled={prizes[k].length < 2} aria-label={`ลบ ${text}`} className="grid h-5 w-5 place-items-center rounded-full text-slate-500 hover:bg-white disabled:opacity-30">×</button>
+            )}
+
+            {mode === 'solo' && (
+              <>
+                <div className={`${tray} -mt-2`}>
+                  {phase === 'ready' && <p className="px-6 text-center text-sm font-semibold text-white">{left > 0 ? 'กดหมุนตู้ ไข่จะกลิ้งออกมาที่นี่' : 'ไข่หมดตู้แล้ว'}</p>}
+                  {phase === 'rolling' && <p className="text-lg font-extrabold text-white">กำลังหมุน...</p>}
+                  {soloStage && <Stage s={soloStage} />}
+                </div>
+                <div className="mt-3">
+                  {phase === 'egg' && cta('เปิดไข่!', openSolo)}
+                  {phase === 'open' && left > 0 && cta('เก็บไข่ต่อไป', () => setPhase('ready'))}
+                  {phase === 'ready' && left > 0 && cta('หมุนตู้!', turn)}
+                  {(phase === 'ready' || phase === 'open') && left < 1 && cta('สับไข่ใหม่', () => resetAll())}
+                </div>
+              </>
+            )}
+
+            {mode === 'all' && (
+              <>
+                <div className="relative mx-auto w-full max-w-[11rem] drop-shadow-[0_10px_14px_rgba(120,20,60,.35)]"><Machine rolling={allPhase === 'rolling'} left={allPhase === 'ready' ? total : 0} /></div>
+                {allPhase === 'out' && (
+                  <ul className="mt-2 grid grid-cols-2 gap-2" aria-label="ไข่ของแต่ละคน">
+                    {eggs.map((e, i) => {
+                      const o = opened.find((x) => x.player.id === e.player.id)
+                      return (
+                        <li key={e.player.id} className="relative flex min-h-[9.5rem] flex-col items-center justify-end rounded-2xl bg-white/25 p-2 ring-1 ring-white/50 backdrop-blur-sm">
+                          {o ? <ResultCard e={o} className="w-full" /> : (
+                            <button onClick={() => openOne(e)} aria-label="เปิดไข่" className="egg-out flex flex-col items-center" style={{ animationDelay: `${i * 90}ms` }}>
+                              <Capsule shell={e.shell} className="w-20" />
+                              <span className="mt-1 text-xs font-bold text-white">แตะเพื่อเปิด</span>
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+                <div className="mt-3">
+                  {allPhase === 'ready' && cta('ทุกคนหมุนพร้อมกัน!', spinAll)}
+                  {allPhase === 'rolling' && <p className="text-center text-lg font-extrabold text-white">กำลังหมุน...</p>}
+                  {allPhase === 'out' && opened.length < total && cta('เปิดไข่ทุกใบ', openAll)}
+                  {allPhase === 'out' && opened.length >= total && cta('หมุนใหม่ทุกคน', () => resetAll())}
+                </div>
+              </>
+            )}
+
+            {mode === 'phones' && (
+              <>
+                <div className={`${tray} -mt-2`}>
+                  {!stage && <p className="px-6 text-center text-sm font-semibold text-white">{spun.length ? 'รอเพื่อนคนต่อไปหมุน...' : 'ให้เพื่อนกดหมุนที่มือถือของตัวเอง ผลจะขึ้นที่นี่'}</p>}
+                  {stage && <Stage s={stage} />}
+                </div>
+                <ul className="mt-3 grid grid-cols-2 gap-1.5" aria-label="สถานะผู้เล่น">
+                  {roster.map((p) => {
+                    const did = spun.includes(p.id)
+                    return (
+                      <li key={p.id} className={`flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm ${did ? 'bg-emerald-100 text-emerald-900' : 'bg-white/90 text-slate-700'}`}>
+                        <span className="w-7 shrink-0"><Animal animal={p.animal} /></span>
+                        <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
+                        {did ? <span className="text-xs font-bold text-emerald-600">หมุนแล้ว</span>
+                          : p.remote ? <span className="text-xs text-slate-400">รอหมุน</span>
+                            : <button onClick={() => spinFor(p.id)} className="rounded-lg bg-amber-300 px-2 py-0.5 text-xs font-extrabold text-amber-950">หมุนให้</button>}
+                      </li>
+                    )
+                  })}
+                </ul>
+                {spun.length >= roster.length && !busy && <div className="mt-3">{cta('เริ่มรอบใหม่', () => resetAll())}</div>}
+              </>
+            )}
+          </section>
+        </div>
+
+        {/* ===== ขวา: ผลรางวัล + ตั้งค่า ===== */}
+        <div className="flex flex-col gap-3">
+          <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-rose-100" aria-label="ผลรางวัล">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-extrabold text-rose-600">ผลรางวัล <span className="text-sm font-semibold text-slate-400">{opened.length}/{total}</span></h3>
+              {opened.length > 1 && (
+                <label className="flex items-center gap-1.5 text-xs text-slate-600">เรียงตาม
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-sm">
+                    <option value="order">ลำดับที่เปิด</option>
+                    <option value="name">ชื่อคน</option>
+                    <option value="prize">ชื่อรางวัล</option>
+                    <option value="tier">ระดับ</option>
+                  </select>
+                </label>
+              )}
+            </div>
+            {opened.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5 text-xs font-extrabold">
+                {['gold', 'silver', 'bronze', 'none'].filter((k) => gotCount(k) > 0).map((k) => (
+                  <span key={k} className="rounded-full px-2.5 py-0.5 text-white" style={{ background: TIERS[k].color }}>{TIERS[k].label} {gotCount(k)}</span>
+                ))}
+              </div>
+            )}
+            {opened.length === 0 ? (
+              <div className="grid place-items-center rounded-2xl border-2 border-dashed border-rose-200 px-4 py-8 text-center text-sm text-rose-900/50">
+                ผลจะขึ้นที่นี่ทันทีที่เปิดไข่<br />แต่ละคนได้รางวัลอะไร ระดับไหน
+              </div>
+            ) : (
+              <ul className="grid gap-2 min-[420px]:grid-cols-2" aria-live="polite" aria-label="ผลที่เปิดแล้ว">
+                {sortedResults.map((d) => (
+                  <li key={d.player.id} className="pop relative flex items-center gap-2 overflow-hidden rounded-2xl py-2 pl-4 pr-3 ring-1 ring-black/5" style={{ background: TIERS[d.tier].light }}>
+                    <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: TIERS[d.tier].color }} />
+                    <span className="w-10 shrink-0"><Animal animal={d.player.animal} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-extrabold uppercase tracking-wide" style={{ color: TIERS[d.tier].color }}>{TIERS[d.tier].label}</span>
+                      <span className="block truncate text-base font-extrabold text-slate-800">{d.player.name}</span>
+                      <span className="block truncate text-sm font-semibold text-slate-600">{d.prize ?? 'ไข่เปล่า'}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
-              <div className="flex gap-1.5">
-                <input value={draft[k]} placeholder={`เพิ่มรางวัลระดับ${t.label} (หลายอย่างคั่นด้วย , ได้)`} aria-label={`เพิ่มรางวัลระดับ${t.label}`}
-                       onPaste={(e) => { const tx = e.clipboardData?.getData('text') ?? ''; if (/[\n\r]/.test(tx)) { e.preventDefault(); addPrize(k, `${draft[k]},${tx}`) } }}
-                       onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
-                       onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addPrize(k) }}
-                       className="min-w-0 flex-1 rounded-lg border-2 bg-white px-2 py-1.5 text-sm outline-none" style={{ borderColor: t.color }} />
-                <button onClick={() => addPrize(k)} className="rounded-lg px-3 text-sm font-bold text-white" style={{ background: t.color }}>+ เพิ่ม</button>
+            )}
+            {waiting.length > 0 && opened.length > 0 && (
+              <div className="mt-3 rounded-2xl bg-slate-50 p-2.5 ring-1 ring-slate-200" aria-label="คนที่ยังไม่ได้รางวัล">
+                <h4 className="mb-1.5 text-sm font-extrabold text-slate-600">ยังไม่ได้รางวัล ({waiting.length})</h4>
+                <ul className="flex flex-wrap gap-1.5">
+                  {waiting.map(({ p, empty }) => (
+                    <li key={p.id} className={`flex items-center gap-1 rounded-full py-0.5 pl-1 pr-3 text-sm font-semibold ${empty ? 'bg-slate-200 text-slate-600' : 'bg-white text-slate-500 ring-1 ring-slate-200'}`}>
+                      <span className="w-6"><Animal animal={p.animal} /></span>{p.name} <span className="text-xs font-normal">{empty ? 'ไข่เปล่า' : 'ยังไม่เปิด'}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
+            )}
+          </section>
+
+          {/* ตั้งค่า: เก็บไว้ในกล่องพับ เพื่อไม่ให้หน้ายาว */}
+          <details className="group rounded-3xl bg-white p-3 shadow-sm ring-1 ring-rose-100">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+              <span>
+                <span className="block text-lg font-extrabold text-rose-600">ตั้งค่ารางวัลและกติกา</span>
+                <span className="block text-xs text-slate-500">{tiersOn.map((k) => `${TIERS[k].label} ${prizes[k].length}`).join(' · ')} · {repeat ? 'ซ้ำได้' : 'ไม่ซ้ำ'}</span>
+              </span>
+              <span className="text-rose-400 transition group-open:rotate-180" aria-hidden="true">▼</span>
+            </summary>
+
+            <div className="mt-3 border-t border-rose-100 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs text-emerald-600">บันทึกอัตโนมัติในเครื่องนี้ ✓</span>
+                <button onClick={() => setPrizes(DEFAULT_PRIZES)} className="text-xs text-slate-500 underline">คืนค่าเริ่มต้น</button>
+              </div>
+              <label className="mb-3 flex items-start gap-2 rounded-xl bg-rose-50 p-2.5 text-sm font-semibold text-slate-700">
+                <input type="checkbox" className="mt-1" checked={repeat} onChange={(e) => resetAll(mode, tiersOn, e.target.checked)} />
+                <span>ให้รางวัลซ้ำกันได้ <span className="block text-xs font-normal text-slate-500">ปิด = รางวัลแต่ละอย่างแจกได้แค่ 1 คน ถ้ารางวัลน้อยกว่าคน คนที่เหลือได้ไข่เปล่า (เปลี่ยนแล้วเริ่มรอบใหม่)</span></span>
+              </label>
+              <fieldset className="mb-3">
+                <legend className="mb-1 text-sm font-semibold text-slate-700">ระดับที่ใช้ <span className="text-xs font-normal text-slate-500">(เปลี่ยนแล้วเริ่มรอบใหม่ · ต้องเหลืออย่างน้อย 1 ระดับ)</span></legend>
+                <div className="flex flex-wrap gap-2">
+                  {ORDER.map((k) => {
+                    const on = tiersOn.includes(k)
+                    return (
+                      <label key={k} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1" style={{ color: TIERS[k].color, background: on ? TIERS[k].light : '#fff', '--tw-ring-color': TIERS[k].color }}>
+                        <input type="checkbox" checked={on} disabled={on && tiersOn.length === 1}
+                               onChange={() => resetAll(mode, ORDER.filter((x) => (x === k ? !on : tiersOn.includes(x))))} />
+                        {TIERS[k].label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+
+              {/* รายการรางวัล: เลือกดูทีละระดับ */}
+              <div role="tablist" aria-label="ระดับรางวัล" className="mb-2 flex gap-1 rounded-xl bg-slate-100 p-1">
+                {tiersOn.map((k) => (
+                  <button key={k} role="tab" aria-selected={et === k} onClick={() => setEditTier(k)}
+                          className="flex-1 rounded-lg px-2 py-1.5 text-sm font-extrabold transition" style={et === k ? { background: TIERS[k].color, color: '#fff' } : { color: TIERS[k].color }}>
+                    {TIERS[k].label} <span className="text-xs font-semibold opacity-80">{prizes[k].length}</span>
+                  </button>
+                ))}
+              </div>
+              {(() => {
+                const k = et; const t = TIERS[k]
+                return (
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-sm font-extrabold" style={{ color: t.color }}>รางวัลระดับ{t.label} ({prizes[k].length})</span>
+                      <button onClick={() => setPrizes({ ...prizes, [k]: [...prizes[k]].sort((a, b) => a.localeCompare(b, 'th')) })} className="text-xs text-slate-500 underline">เรียงตามชื่อ ก-ฮ</button>
+                    </div>
+                    <ul className="mb-2 flex flex-wrap gap-1.5">
+                      {prizes[k].map((text, i) => (
+                        <li key={text} className="flex items-center gap-1 rounded-full py-0.5 pl-3 pr-1 text-sm font-semibold text-slate-700" style={{ background: t.light, boxShadow: `inset 0 0 0 1.5px ${t.color}` }}>
+                          {text}
+                          <button onClick={() => removePrize(k, i)} disabled={prizes[k].length < 2} aria-label={`ลบ ${text}`} className="grid h-5 w-5 place-items-center rounded-full text-slate-500 hover:bg-white disabled:opacity-30">×</button>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex gap-1.5">
+                      <input value={draft[k]} placeholder={`เพิ่มรางวัลระดับ${t.label} (หลายอย่างคั่นด้วย , ได้)`} aria-label={`เพิ่มรางวัลระดับ${t.label}`}
+                             onPaste={(e) => { const tx = e.clipboardData?.getData('text') ?? ''; if (/[\n\r]/.test(tx)) { e.preventDefault(); addPrize(k, `${draft[k]},${tx}`) } }}
+                             onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
+                             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addPrize(k) }}
+                             className="min-w-0 flex-1 rounded-lg border-2 bg-white px-2 py-1.5 text-sm outline-none" style={{ borderColor: t.color }} />
+                      <button onClick={() => addPrize(k)} className="rounded-lg px-3 text-sm font-bold text-white" style={{ background: t.color }}>+ เพิ่ม</button>
+                    </div>
+                  </div>
+                )
+              })()}
+              <p className="mt-2 text-xs text-slate-500">ซ้ำได้ = ไข่แต่ละใบสุ่มรางวัลจากรายการของระดับนั้น (อาจได้เหมือนกัน) · ไม่ซ้ำ = สับรางวัลทุกอย่างแล้วแจกรางวัลละ 1 คน</p>
             </div>
-          )
-        })}
-        <button onClick={() => setPrizes(DEFAULT_PRIZES)} className="text-xs text-slate-500 underline">คืนค่าเริ่มต้น</button>
-        <p className="mt-1 text-xs text-slate-500">ถ้าเปิด "ซ้ำกันได้" ไข่แต่ละใบสุ่มรางวัลจากรายการของระดับนั้น (อาจได้เหมือนกัน) · ถ้าปิด ระบบสับรางวัลทุกอย่างแล้วแจกรางวัลละ 1 คน</p>
-      </section>
+          </details>
+        </div>
+      </div>
     </Shell>
   )
 }

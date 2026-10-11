@@ -1,9 +1,9 @@
 import Animal from './Animal'
 import { animalById } from '../game/constants'
 
-export function Shell({ title, right, onBack, children }) {
+export function Shell({ title, right, onBack, children, wide = false }) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-4">
+    <div className={`mx-auto flex min-h-dvh w-full flex-col px-4 py-4 ${wide ? 'max-w-md lg:max-w-5xl' : 'max-w-md'}`}>
       <div className="mb-2 flex items-center justify-between">
         <button onClick={onBack} className="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-white/70">← กลับ</button>
         <h2 className="text-xl font-extrabold text-rose-500">{title}</h2>
