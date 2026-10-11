@@ -4,18 +4,21 @@ import Animal from './Animal'
 import { rand, sleep, shuffle } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
+import { useMiniNet } from '../lib/useMiniNet'
 
 // สีพาสเทล น่ารัก ๆ
 const COLORS = ['#ff9ec4', '#ffd966', '#8fd3ff', '#9be8b5', '#c5a8ff', '#ffb48a', '#f7a8e0', '#7fe3da']
 const LEVELS = [0, 2, 1, 3]            // ความสูงสลับกัน ลูกโป่งจะได้ไม่ทับกัน
 const SHREDS = ['♥', '★', '✦', '♥', '★', '✦', '♥', '★', '✦', '♥']
 const CONFETTI = ['#ff9ec4', '#ffd966', '#8fd3ff', '#9be8b5', '#c5a8ff']
+const DUR_KEY = 'animal-race:balloon-dur'
+const CHIPS = { auto: [10, 20, 30, 60, 90], tap: [0, 15, 30, 60, 90] } // วินาที (0 = ไม่จำกัด ใช้ได้เฉพาะโหมดแตะเอง)
 const MODES = {
   auto: { label: 'เข็มสุ่มแตก', desc: 'ปล่อยให้ดวงเลือก' },
   tap: { label: 'แตะแตกเอง', desc: 'แตะลูกโป่งทีละลูก' },
 }
 
-export default function Balloon({ players, onBack }) {
+export default function Balloon({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [outIds, setOutIds] = useState([])
   const alive = roster.filter((p) => !outIds.includes(p.id))
@@ -28,10 +31,17 @@ export default function Balloon({ players, onBack }) {
   const [tense, setTense] = useState(false)     // เหลือ 2 ลูกสุดท้าย
   const [canTap, setCanTap] = useState(false)
   const [needle, setNeedle] = useState(null)    // { x, y, side, ms }
+  const [dur, setDur] = useState(() => Number(load(DUR_KEY, 30)) || 0) // เวลาทั้งหมดที่เลือก (วินาที)
+  const [secLeft, setSecLeft] = useState(null)  // นับถอยหลัง
+  const endsAt = useRef(0)
+  const poppedRef = useRef([]); const phaseRef = useRef('ready'); const finishing = useRef(false)
   const run = useRef(0)
   useEffect(() => () => { run.current = -1 }, [])
   useEffect(() => save('animal-race:balloon-mode', mode), [mode])
+  useEffect(() => save(DUR_KEY, dur), [dur])
+  const effDur = mode === 'auto' ? Math.max(dur || 30, Math.ceil(n * 1.5)) : dur // เวลาจริงที่ใช้ (อย่างน้อย 1.5 วิต่อลูก)
 
+  poppedRef.current = popped; phaseRef.current = phase
   const floating = phase !== 'ready'
   const bw = Math.min(26, 150 / Math.max(n, 1))             // ความกว้างลูกโป่ง (% ของฉาก)
   const geom = (i) => {
@@ -47,6 +57,13 @@ export default function Balloon({ players, onBack }) {
     const t = setInterval(() => { beep(110, 0.09, 'sine', 0.12); setTimeout(() => beep(110, 0.09, 'sine', 0.09), 160) }, 720)
     return () => clearInterval(t)
   }, [tense, phase])
+
+  // นับถอยหลัง
+  useEffect(() => {
+    if (phase !== 'float' || !endsAt.current) { if (phase !== 'float') setSecLeft(null); return undefined }
+    const t = setInterval(() => setSecLeft(Math.max(0, Math.ceil((endsAt.current - Date.now()) / 1000))), 250)
+    return () => clearInterval(t)
+  }, [phase, canTap])
 
   const pop = (id) => {
     beep(1000, 0.05, 'sine', 0.09); setTimeout(() => beep(1500, 0.07, 'triangle', 0.07), 40)
@@ -80,28 +97,49 @@ export default function Balloon({ players, onBack }) {
     await sleep(2000); if (ok()) setModal(true)
   }
 
-  const start = async () => {
-    const id = ++run.current
-    const ok = () => run.current === id
-    setPhase('float'); setPopped([]); setWinner(null); setModal(false); setTense(false); setNeedle(null); setCanTap(false)
-    await sleep(2400); if (!ok()) return
-    if (mode === 'tap') { setCanTap(true); return }
-    const order = shuffle(alive)
-    for (let i = 0; i < order.length - 1; i++) {
+  // แตกทีละลูกตามลำดับ order (ลูกสุดท้ายคือผู้รอด) ให้จบภายในประมาณ totalSec วินาที
+  // ช่วงแรกแตกถี่ ๆ สุ่มช้าเร็ว ส่วน 2 ลูกสุดท้ายเว้นนานขึ้นให้ลุ้น
+  const runPops = async (order, totalSec, ok) => {
+    const m = order.length - 1
+    if (m < 1) return win(order[0], ok)
+    const w = Array.from({ length: m }, (_, i) => (i >= m - 2 ? (i === m - 1 ? 3 : 2) : rand(0.6, 1.4)))
+    const sum = w.reduce((a, b) => a + b, 0)
+    for (let i = 0; i < m; i++) {
       const remain = order.length - i
       if (remain === 2) setTense(true)
-      await sleep(remain <= 2 ? rand(2200, 3000) : rand(900, 1700)); if (!ok()) return
+      const over = 0.9 + (remain === 2 ? 2.6 : 0)
+      await sleep(Math.max(0.25, (totalSec * w[i]) / sum - over) * 1000); if (!ok()) return
       await strike(order[i].id, ok, remain === 2 ? order[order.length - 1].id : null); if (!ok()) return
       await sleep(500)
     }
     win(order[order.length - 1], ok)
   }
 
+  const start = async () => {
+    const id = ++run.current
+    const ok = () => run.current === id
+    finishing.current = false
+    setPhase('float'); setPopped([]); setWinner(null); setModal(false); setTense(false); setNeedle(null); setCanTap(false)
+    endsAt.current = Date.now() + (effDur + 2.4) * 1000; setSecLeft(effDur + 3)
+    if (mode === 'auto') { await sleep(2400); if (ok()) runPops(shuffle(alive), effDur - 2.4 > 3 ? effDur - 2.4 : effDur, ok); return }
+    await sleep(2400); if (!ok()) return
+    setCanTap(true)
+    if (dur > 0) {
+      await sleep(dur * 1000); if (!ok()) return
+      // หมดเวลา: ที่เหลือแตกเองจนเหลือลูกเดียว
+      if (phaseRef.current !== 'float' || finishing.current) return
+      setCanTap(false)
+      const rest = alive.filter((x) => !poppedRef.current.includes(x.id))
+      if (rest.length > 1) runPops(shuffle(rest), Math.max(4, rest.length * 1.5), ok)
+      else if (rest.length === 1) win(rest[0], ok)
+    }
+  }
+
   const tap = (p) => {
     if (!canTap || popped.includes(p.id)) return
     pop(p.id)
     const rest = alive.filter((x) => x.id !== p.id && !popped.includes(x.id))
-    if (rest.length === 1) { setCanTap(false); const id = run.current; win(rest[0], () => run.current === id) } else if (rest.length === 2) setTense(true)
+    if (rest.length === 1) { finishing.current = true; setCanTap(false); const id = run.current; win(rest[0], () => run.current === id) } else if (rest.length === 2) setTense(true)
   }
 
   const again = () => { run.current++; setModal(false); setPhase('ready'); setPopped([]); setWinner(null); setTense(false); setNeedle(null); setCanTap(false) }
@@ -114,6 +152,13 @@ export default function Balloon({ players, onBack }) {
         : canTap ? `แตะลูกโป่งให้แตก · เหลือ ${left} ลูก` : `ลูกโป่งลอยขึ้นแล้ว เหลือ ${left} ลูก`
   const confetti = useMemo(() => Array.from({ length: 36 }, (_, i) => ({ x: rand(0, 100), d: rand(2.4, 4.4), delay: rand(0, 1.4), c: CONFETTI[i % CONFETTI.length] })), [winner])
 
+  useMiniNet({ onNet, registerHandler },
+    { mode, phase, canTap, tense, left, secLeft, winnerId: winner?.id ?? null, alive: alive.filter((p) => !popped.includes(p.id)).map((p) => p.id) },
+    {
+      'balloon-start': () => { if (phase === 'ready' && n >= 2) start() },
+      'balloon-tap': (from, d) => { const p = alive.find((x) => x.id === d?.id); if (p) tap(p) },
+    })
+
   return (
     <Shell title="ลูกโป่งแตก" right={`${left} ลูก`} onBack={() => { run.current = -1; onBack() }}>
       <div role="radiogroup" aria-label="วิธีแตก" className="mb-2 grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
@@ -123,6 +168,22 @@ export default function Balloon({ players, onBack }) {
             {v.label}<div className="text-[10px] font-normal leading-tight opacity-80">{v.desc}</div>
           </button>
         ))}
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-2xl bg-white px-2.5 py-2 shadow-sm ring-1 ring-rose-100" role="group" aria-label="เลือกเวลา">
+        <span className="text-sm font-extrabold text-rose-500">เวลา</span>
+        {CHIPS[mode].map((sec) => (
+          <button key={sec} onClick={() => setDur(sec)} disabled={phase === 'float'} aria-pressed={dur === sec}
+                  className={`rounded-full px-3 py-1 text-sm font-bold ring-1 transition disabled:opacity-50 ${dur === sec ? 'bg-rose-400 text-white ring-rose-400' : 'bg-white text-rose-500 ring-rose-200 hover:bg-rose-50'}`}>
+            {sec === 0 ? 'ไม่จำกัด' : `${sec} วิ`}
+          </button>
+        ))}
+        <label className="ml-auto flex items-center gap-1 text-xs text-slate-500">เอง
+          <input type="number" inputMode="numeric" min={5} max={300} value={dur || ''} placeholder="วิ" disabled={phase === 'float'} aria-label="กำหนดเวลาเอง (วินาที)"
+                 onChange={(e) => setDur(Math.max(0, Math.min(300, Number(e.target.value) || 0)))}
+                 className="w-14 rounded-lg border border-rose-200 px-1.5 py-1 text-center text-sm text-slate-700 disabled:opacity-50" />วิ
+        </label>
+        <p className="w-full text-xs text-slate-500">{mode === 'auto' ? `ลูกโป่งจะแตกจนเหลือลูกเดียวภายในประมาณ ${effDur} วินาที${effDur > dur && dur ? ' (ขั้นต่ำ 1.5 วิต่อลูก)' : ''}` : dur ? `แตะลูกโป่งให้ทันใน ${dur} วินาที หมดเวลาแล้วที่เหลือจะแตกเอง` : 'แตะได้ไม่จำกัดเวลา'}</p>
       </div>
 
       <div className="relative aspect-[3/4] w-full select-none overflow-hidden rounded-[2rem] border-[10px] border-white bg-gradient-to-b from-[#ffd9ec] via-[#e4f3ff] to-[#fff6d9] shadow-xl ring-4 ring-pink-200">
@@ -145,8 +206,11 @@ export default function Balloon({ players, onBack }) {
         {/* ฉากลุ้น 2 ลูกสุดท้าย */}
         <div className="pointer-events-none absolute inset-0 z-[8] transition-opacity duration-700" style={{ opacity: tense && phase === 'float' ? 1 : 0, background: 'radial-gradient(circle at 50% 50%, transparent 38%, rgba(150,90,190,.38) 100%)' }} />
 
+        {phase === 'float' && secLeft != null && (
+          <div className="absolute left-2 top-2 z-[9] rounded-full bg-white/90 px-2.5 py-1 text-sm font-extrabold tabular-nums text-rose-500 shadow ring-2 ring-pink-200" aria-label="เวลาที่เหลือ">⏱ {secLeft}</div>
+        )}
         {/* ฟองข้อความด้านบน */}
-        <div className="absolute inset-x-0 top-[2.5%] z-[9] text-center">
+        <div className="absolute inset-x-0 top-[2.5%] z-[9] px-14 text-center">
           <span className={`inline-block rounded-full bg-white/95 px-4 py-1.5 text-sm font-extrabold shadow ring-2 ring-pink-200 ${tense && phase === 'float' ? 'animate-pulse text-fuchsia-600' : 'text-rose-500'}`}>{bubble}</span>
         </div>
 

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Shell, BigButton, ResultModal } from './MiniShell'
 import { rand, sleep } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const COLORS = ['#ff8fab', '#ffd166', '#8ed1fc', '#a0e3b0', '#c3a6ff', '#ffb38a', '#f6a6d5', '#9fe0e0']
 const R = 88
 const pt = (deg, r) => { const t = (deg * Math.PI) / 180; return [100 + r * Math.sin(t), 100 - r * Math.cos(t)] }
 
-export default function Dart({ players, onBack }) {
+export default function Dart({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [outIds, setOutIds] = useState([])
   const alive = roster.filter((p) => !outIds.includes(p.id))
@@ -63,6 +64,10 @@ export default function Dart({ players, onBack }) {
   const again = () => { setWinner(null); setDart(null); setMsg(''); setBusy(false) }
   const eliminate = () => { const w = winner; again(); setOutIds((o) => [...o, w.id]) }
   const reset = () => { setOutIds([]); setHist([]); again() }
+
+  useMiniNet({ onNet, registerHandler },
+    { phase: busy ? 'busy' : winner ? 'done' : 'aim', msg, winnerId: winner?.id ?? null },
+    { 'dart-throw': () => { if (!winner) throwDart() } })
 
   return (
     <Shell title="ปาเป้า" right={`${n} ช่อง`} onBack={onBack}>

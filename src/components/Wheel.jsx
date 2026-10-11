@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Animal from './Animal'
 import { animalById } from '../game/constants'
 import { beep, fanfare } from '../lib/sound'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const COLORS = ['#ff8fab', '#ffd166', '#8ed1fc', '#a0e3b0', '#c3a6ff', '#ffb38a', '#f6a6d5', '#9fe0e0']
 const SPIN_MS = 5200
@@ -12,7 +13,7 @@ const pt = (deg, r) => {
   return [100 + r * Math.sin(t), 100 - r * Math.cos(t)]
 }
 
-export default function Wheel({ players, onBack }) {
+export default function Wheel({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [outIds, setOutIds] = useState([])
   const remaining = roster.filter((p) => !outIds.includes(p.id))
@@ -47,6 +48,10 @@ export default function Wheel({ players, onBack }) {
   const again = () => setWinner(null)
   const eliminate = () => { setOutIds((o) => [...o, winner.id]); setWinner(null) }
   const reset = () => { setOutIds([]); setPicked([]); setWinner(null) }
+
+  useMiniNet({ onNet, registerHandler },
+    { phase: spinning ? 'spin' : winner ? 'done' : 'ready', winnerId: winner?.id ?? null, n },
+    { 'wheel-spin': () => { if (!winner) spin() } })
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-4">

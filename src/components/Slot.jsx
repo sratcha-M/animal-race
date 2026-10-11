@@ -3,6 +3,7 @@ import { Shell, BigButton } from './MiniShell'
 import { randInt } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const DEFAULT_DUTY = ['ร้องเพลง', 'เต้นท่าไก่', 'เล่าเรื่องตลก', 'ทำเสียงสัตว์', 'ชมเพื่อน', 'ถ่ายรูปหน้าตลก']
 const DEFAULT_COND = ['1 นาที', '2 รอบ', 'ต่อหน้าทุกคน', 'แบบสโลว์โมชั่น', 'ด้วยเสียงเล็ก', 'แบบดราม่า']
@@ -10,7 +11,7 @@ const ROW = 56       // ความสูงต่อแถวของรี�
 const REP = 18       // จำนวนรอบที่ซ้ำในแถบรีล
 const lines = (s, fb) => { const l = s.split('\n').map((t) => t.trim()).filter(Boolean); return l.length ? l : fb }
 
-export default function Slot({ players, onBack }) {
+export default function Slot({ players, onBack, onNet, registerHandler }) {
   const names = useMemo(() => players.map((p) => p.name), [players])
   const [dutyText, setDutyText] = useState(() => load('animal-race:slot-duty', DEFAULT_DUTY.join('\n')))
   const [condText, setCondText] = useState(() => load('animal-race:slot-cond', DEFAULT_COND.join('\n')))
@@ -53,6 +54,10 @@ export default function Slot({ players, onBack }) {
       setResult(text); setHistory((h) => [text, ...h].slice(0, 6)); setSpinning(false); fanfare()
     }, durs[2] + 200)
   }
+
+  useMiniNet({ onNet, registerHandler },
+    { spinning, result },
+    { 'slot-pull': () => pull() })
 
   return (
     <Shell title="สล็อตแมชชีน" right={`${names.length} คน`} onBack={onBack}>

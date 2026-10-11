@@ -164,6 +164,14 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
     setEggs(deal(rosterRef.current, outcomes(rosterRef.current.length, tiers, prizesRef.current, rep))); setRepeat(rep); setOpened([]); setDrawn(0); setPhase('ready'); setAllPhase('ready'); setSpun([]); setStage(null); setMode(m); setTiersOn(tiers)
   }
 
+  // มีคนเข้า/ออกห้องตอนยังไม่มีใครเปิดไข่: แบ่งไข่ใหม่ให้พอดีกับจำนวนคน (โหมดมือถือรับคนเข้ามาเพิ่มได้เองอยู่แล้ว)
+  const lastCount = useRef(roster.length)
+  useEffect(() => {
+    if (lastCount.current === roster.length) return
+    lastCount.current = roster.length
+    if (modeRef.current !== 'phones' && opened.length === 0) resetAll()
+  }, [roster.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---------- ทีละใบ ----------
   const left = eggs.length - drawn
   const current = eggs[drawn - 1]

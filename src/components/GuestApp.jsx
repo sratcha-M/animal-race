@@ -6,6 +6,7 @@ import { openRoom, newId } from '../lib/net'
 import { cleanName, nameTaken } from '../lib/name'
 import { MINI_BY_ID } from '../games'
 import { TIERS } from './Gacha'
+import MiniGuest from './MiniGuest'
 import { load, save } from '../lib/storage'
 import { beep } from '../lib/sound'
 
@@ -142,6 +143,10 @@ export default function GuestApp({ code }) {
     const g = s.mini
     if (!g || g.mode !== 'phones') return <Center title="กาชาปองกำลังเล่นอยู่" sub="ดูผลที่จอหลักได้เลย" me={mine} />
     return <GachaPhone g={g} me={me} mine={mine} onSpin={() => net.current.send('gacha-spin', {})} />
+  }
+  // เกมย่อยอื่น ๆ (วงล้อ ตู้คีบ ลูกโป่ง บันไดงู ไพ่ ปาเป้า สล็อต): เพื่อนกดสั่งจากมือถือได้
+  if (MINI_BY_ID[s.screen]) {
+    return <MiniGuest game={s.screen} title={MINI_BY_ID[s.screen].title} g={s.mini} me={me} mine={mine} players={s.players} send={(type, data) => net.current.send(type, data ?? {})} />
   }
   // แข่งวิ่ง
   if (s.screen === 'race') {

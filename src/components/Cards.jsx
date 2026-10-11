@@ -3,13 +3,14 @@ import { Shell, BigButton, ResultModal } from './MiniShell'
 import Animal from './Animal'
 import { randInt, shuffle, sleep } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const MODES = {
   pick: { label: 'สุ่มเลือก', desc: 'สลับไพ่ แล้วเปิดใบเดียว' },
   match: { label: 'จับคู่', desc: 'ชื่อละ 2 ใบ ความจำล้วน ๆ' },
 }
 
-export default function Cards({ players, onBack }) {
+export default function Cards({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [outIds, setOutIds] = useState([])
   const alive = roster.filter((p) => !outIds.includes(p.id))
@@ -83,6 +84,16 @@ export default function Cards({ players, onBack }) {
   const reset = () => { setOutIds([]); again() }
 
   const msg = { show: 'จำตำแหน่งไพ่ไว้!', shuffle: 'กำลังสลับไพ่...', play: mode === 'pick' ? 'เลือกไพ่มา 1 ใบ' : `เปิดไพ่ทีละ 2 ใบ · ครั้งที่ ${attempts}`, ready: '', done: '' }[phase]
+
+  useMiniNet({ onNet, registerHandler },
+    {
+      mode, phase, cols, rows, attempts, winnerId: winner?.id ?? null,
+      cards: deck.map((c) => {
+        const faceUp = up.includes(c.id) || matched.includes(c.id)
+        return { id: c.id, slot: slotOf[c.id] ?? 0, up: faceUp, matched: matched.includes(c.id), ...(faceUp ? { name: c.p.name, animal: c.p.animal } : {}) }
+      }),
+    },
+    { 'cards-flip': (from, d) => { const c = deck.find((x) => x.id === d?.id); if (c) flip(c) } })
 
   return (
     <Shell title="ไพ่คว่ำ" right={`${n} คน`} onBack={() => { run.current = -1; onBack() }}>

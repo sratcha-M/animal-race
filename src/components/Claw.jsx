@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Animal from './Animal'
 import { animalById } from '../game/constants'
 import { beep, fanfare } from '../lib/sound'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const rand = (a, b) => a + Math.random() * (b - a)
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]
@@ -26,7 +27,7 @@ function layout(n) {
   })
 }
 
-export default function Claw({ players, onBack }) {
+export default function Claw({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [outIds, setOutIds] = useState([])            // คนที่ถูกคีบออกไปแล้ว (โหมดคัดออก)
   const remaining = roster.filter((p) => !outIds.includes(p.id))
@@ -116,6 +117,10 @@ export default function Claw({ players, onBack }) {
   const eliminate = () => { setOutIds((o) => [...o, winner.id]); setGone(null); setWinner(null); setPhase('ready'); setMsg('') }
   const reset = () => { setOutIds([]); setPicked([]); again() }
   const n = remaining.length
+
+  useMiniNet({ onNet, registerHandler },
+    { phase, msg, drops, winnerId: winner?.id ?? null, n: remaining.length },
+    { 'claw-go': () => { if (phase === 'ready' && remaining.length >= 2) start() } })
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-4">

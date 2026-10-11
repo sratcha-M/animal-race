@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Shell, BigButton } from './MiniShell'
 import { beep, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
+import { useMiniNet } from '../lib/useMiniNet'
 
 const COLORS = ['#f43f5e', '#f59e0b', '#0ea5e9', '#22c55e', '#8b5cf6', '#f97316', '#ec4899', '#14b8a6']
 const DEFAULT_SLOTS = ['ล้างจาน', 'ถูบ้าน', 'ซื้อน้ำ', 'เลี้ยงขนม', 'เก็บขยะ', 'จดบันทึก', 'ถือของ', 'พักผ่อน']
@@ -28,7 +29,7 @@ function trace(rungs, start, n) {
   return { pts, end: col }
 }
 
-export default function Ladder({ players, onBack }) {
+export default function Ladder({ players, onBack, onNet, registerHandler }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const n = roster.length
   const [rungs, setRungs] = useState(() => makeRungs(n))
@@ -40,6 +41,14 @@ export default function Ladder({ players, onBack }) {
   const colW = 64
   const x = (c) => c * 100 + 50
 
+  // มีคนเข้า/ออกห้อง: จัดเส้นและช่องปลายทางใหม่ให้พอดีกับจำนวนคน
+  const firstRun = useRef(true)
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return }
+    setRungs(makeRungs(n)); setShown([])
+    setSlots((prev) => Array.from({ length: n }, (_, i) => prev[i] || DEFAULT_SLOTS[i % DEFAULT_SLOTS.length]))
+  }, [n])
+
   const reveal = (i) => {
     if (shown.includes(i)) return
     setShown((s) => [...s, i])
@@ -49,6 +58,10 @@ export default function Ladder({ players, onBack }) {
   const revealAll = () => { roster.forEach((_, i) => setTimeout(() => reveal(i), i * 400)); setTimeout(fanfare, n * 400 + 2400) }
   const reroll = () => { setRungs(makeRungs(n)); setShown([]) }
   const setSlot = (i, v) => { const s = slots.map((t, k) => (k === i ? v : t)); setSlots(s); save('animal-race:ladder-slots', s) }
+
+  useMiniNet({ onNet, registerHandler },
+    { slots, shown: shown.map((i) => roster[i]?.id), results: Object.fromEntries(shown.filter((i) => roster[i] && paths[i]).map((i) => [roster[i].id, slots[paths[i].end]])) },
+    { 'ladder-go': (from) => { const i = roster.findIndex((p) => p.id === from); if (i >= 0) reveal(i) } })
 
   return (
     <Shell title="บันไดงู" right={`${n} คน`} onBack={onBack}>
