@@ -156,7 +156,7 @@ export default function GuestApp({ code }) {
   return (
     <main className={shell}>
       <div className="mx-auto max-w-md text-center">
-        <div className="text-sm font-semibold text-sky-700">ห้อง {code} · {s.tab === 'bomb' ? 'ระเบิดเวลา' : 'แข่งวิ่ง'}</div>
+        <div className="text-sm font-semibold text-sky-700">ห้อง {code} · {{ bomb: 'ระเบิดเวลา', claw: 'ตู้คีบตุ๊กตา' }[s.tab] ?? 'แข่งวิ่ง'}</div>
         <div className="float mx-auto mt-3 w-44"><Animal animal={mine.animal} number={mine.num} running /></div>
         <h1 className="text-3xl font-extrabold text-rose-500">{mine.name}</h1>
         <p className="mt-1 text-rose-900/70">เข้าห้องแล้ว! รอเจ้าของห้องเริ่มเกม</p>
