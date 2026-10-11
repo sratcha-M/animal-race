@@ -17,7 +17,9 @@ const DEFAULT_PRIZES = {
   bronze: ['รางวัลปลอบใจ'],
 }
 const KEY = 'animal-race:gacha-prizes'
-const BRONZE_KEY = 'animal-race:gacha-bronze'
+const TIERS_KEY = 'animal-race:gacha-tiers'
+const BRONZE_KEY = 'animal-race:gacha-bronze' // ค่าเดิม (เปิด/ปิดทองแดงอย่างเดียว)
+const ORDER = ['gold', 'silver', 'bronze'] // เรียงจากหายากไปธรรมดา
 const MODES = {
   solo: { label: 'ทีละใบ', desc: 'เจ้าของห้องหมุนเอง' },
   all: { label: 'พร้อมกัน', desc: 'ทุกคนหมุนทีเดียว' },
@@ -34,6 +36,7 @@ function loadPrizes() {
   }))
 }
 // สุ่มของรางวัลจากรายการของระดับนั้น ให้ซ้ำกันน้อยที่สุด
+const parsePrizes = (text) => String(text).split(/[,;\n\r،、]+/).map((t) => t.trim().slice(0, 24)).filter(Boolean)
 const prizePicker = () => {
   const bag = {}
   return (tier, list) => {
@@ -41,20 +44,27 @@ const prizePicker = () => {
     return bag[tier].pop()
   }
 }
-// สัดส่วนระดับของไข่ทั้งหมด: 3 ระดับ = ทอง 1 / เงิน ~1 ใน 3 / ที่เหลือทองแดง
-// 2 ระดับ (ปิดทองแดง) = ทองประมาณ 1 ใน 3 (อย่างน้อย 1) ที่เหลือเงิน
-function tierBag(n, bronze) {
+// สัดส่วนระดับของไข่ทั้งหมด (tiers เรียงจากหายากไปธรรมดา)
+// 3 ระดับ = หายากสุด 1 ใบ / ระดับกลาง ~1 ใน 3 / ที่เหลือธรรมดา
+// 2 ระดับ = หายาก ~1 ใน 3 (อย่างน้อย 1 ใบ) ที่เหลือธรรมดา · 1 ระดับ = ทุกใบเป็นระดับนั้น
+function tierBag(n, tiers) {
   if (n < 1) return []
-  if (!bronze) {
-    const gold = Math.min(n, Math.max(1, Math.round(n / 3)))
-    return shuffle([...Array(gold).fill('gold'), ...Array(n - gold).fill('silver')])
+  if (tiers.length === 1) return Array(n).fill(tiers[0])
+  if (tiers.length === 2) {
+    const rare = Math.min(n, Math.max(1, Math.round(n / 3)))
+    return shuffle([...Array(rare).fill(tiers[0]), ...Array(n - rare).fill(tiers[1])])
   }
-  const silver = n >= 3 ? Math.max(1, Math.round(n / 3)) : 0
-  return shuffle(['gold', ...Array(silver).fill('silver'), ...Array(Math.max(0, n - 1 - silver)).fill('bronze')]).slice(0, n)
+  const mid = n >= 3 ? Math.max(1, Math.round(n / 3)) : 0
+  return shuffle([tiers[0], ...Array(mid).fill(tiers[1]), ...Array(Math.max(0, n - 1 - mid)).fill(tiers[2])]).slice(0, n)
 }
-const deal = (roster, bronze) => {
-  const tiers = tierBag(roster.length, bronze)
-  return shuffle(roster).map((p, i) => ({ player: p, tier: tiers[i], shell: pick(PASTELS) }))
+const deal = (roster, tiers) => {
+  const bag = tierBag(roster.length, tiers)
+  return shuffle(roster).map((p, i) => ({ player: p, tier: bag[i], shell: pick(PASTELS) }))
+}
+function loadTiers() {
+  const saved = load(TIERS_KEY, null)
+  const on = ORDER.filter((k) => (saved ? saved[k] !== false : !(k === 'bronze' && load(BRONZE_KEY, true) === false)))
+  return on.length ? on : ORDER
 }
 
 function Capsule({ shell, open, className = 'w-28' }) {
@@ -114,11 +124,11 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [mode, setMode] = useState('solo')
   const [prizes, setPrizes] = useState(loadPrizes)
-  const [bronze, setBronze] = useState(() => load(BRONZE_KEY, true) !== false)
+  const [tiersOn, setTiersOn] = useState(loadTiers) // ระดับที่เปิดใช้ (เรียงหายาก→ธรรมดา)
   const [draft, setDraft] = useState({ gold: '', silver: '', bronze: '' })
   const picker = useRef(prizePicker())
   const [opened, setOpened] = useState([])        // ผลที่เปิดแล้ว (ทุกโหมดใช้ร่วมกัน) แสดงด้านล่างทันที
-  const [eggs, setEggs] = useState(() => deal(roster, bronze))
+  const [eggs, setEggs] = useState(() => deal(roster, tiersOn))
   // ทีละใบ
   const [drawn, setDrawn] = useState(0)
   const [phase, setPhase] = useState('ready')     // ready | rolling | egg | open
@@ -127,7 +137,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   // มือถือ
   const [spun, setSpun] = useState([])            // id ผู้เล่นที่หมุนแล้ว
   const [stage, setStage] = useState(null)        // { e, phase: 'egg' | 'open' }
-  const bag = useRef(tierBag(roster.length, bronze))
+  const bag = useRef(tierBag(roster.length, tiersOn))
   const queue = useRef([])
   const pumping = useRef(false)
   const alive = useRef(true)
@@ -135,21 +145,20 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   const later = (fn, ms) => timers.current.push(setTimeout(fn, ms))
   useEffect(() => { alive.current = true; return () => { alive.current = false; timers.current.forEach(clearTimeout) } }, [])
   useEffect(() => save(KEY, prizes), [prizes])
-  useEffect(() => save(BRONZE_KEY, bronze), [bronze])
+  useEffect(() => save(TIERS_KEY, Object.fromEntries(ORDER.map((k) => [k, tiersOn.includes(k)]))), [tiersOn])
 
   const rosterRef = useRef(roster); rosterRef.current = roster
   const modeRef = useRef(mode); modeRef.current = mode
   const spunRef = useRef(spun); spunRef.current = spun
   const prizesRef = useRef(prizes); prizesRef.current = prizes
-  const bronzeRef = useRef(bronze); bronzeRef.current = bronze
-  const tiersOn = bronze ? ['gold', 'silver', 'bronze'] : ['gold', 'silver']
+  const tiersRef = useRef(tiersOn); tiersRef.current = tiersOn
 
-  const resetAll = (m = mode, br = bronze) => {
+  const resetAll = (m = mode, tiers = tiersOn) => {
     timers.current.forEach(clearTimeout); timers.current = []
     queue.current = []; pumping.current = false
-    bronzeRef.current = br
-    bag.current = tierBag(rosterRef.current.length, br)
-    setEggs(deal(rosterRef.current, br)); setOpened([]); setDrawn(0); setPhase('ready'); setAllPhase('ready'); setSpun([]); setStage(null); setMode(m); setBronze(br)
+    tiersRef.current = tiers
+    bag.current = tierBag(rosterRef.current.length, tiers)
+    setEggs(deal(rosterRef.current, tiers)); setOpened([]); setDrawn(0); setPhase('ready'); setAllPhase('ready'); setSpun([]); setStage(null); setMode(m); setTiersOn(tiers)
   }
 
   // ---------- ทีละใบ ----------
@@ -200,7 +209,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
     if (modeRef.current !== 'phones' || spunRef.current.includes(id)) return
     const p = rosterRef.current.find((x) => x.id === id)
     if (!p) return
-    const tier = bag.current.pop() ?? (bronzeRef.current ? 'bronze' : 'silver')
+    const tier = bag.current.pop() ?? tiersRef.current[tiersRef.current.length - 1]
     spunRef.current = [...spunRef.current, id]
     setSpun(spunRef.current)
     queue.current.push({ player: p, tier, shell: pick(PASTELS) })
@@ -215,10 +224,12 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   useEffect(() => () => onNet?.(null), []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- ของรางวัล ----------
-  const addPrize = (k) => {
-    const t = draft[k].trim()
-    if (!t || prizes[k].includes(t)) return
-    setPrizes({ ...prizes, [k]: [...prizes[k], t] }); setDraft({ ...draft, [k]: '' })
+  // เพิ่มหลายรางวัลทีเดียว: คั่นด้วย , ; หรือขึ้นบรรทัดใหม่ เช่น "นอน,ลางาน,หยุด,เงิน" = 4 รางวัล
+  const addPrize = (k, text = draft[k]) => {
+    const fresh = []
+    for (const t of parsePrizes(text)) if (!prizes[k].includes(t) && !fresh.includes(t)) fresh.push(t)
+    if (fresh.length) setPrizes({ ...prizes, [k]: [...prizes[k], ...fresh] })
+    setDraft({ ...draft, [k]: '' })
   }
   const removePrize = (k, i) => prizes[k].length > 1 && setPrizes({ ...prizes, [k]: prizes[k].filter((_, j) => j !== i) })
 
@@ -335,10 +346,21 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
           <h3 className="font-extrabold text-rose-600">ของรางวัล</h3>
           <span className="text-xs text-emerald-600">บันทึกอัตโนมัติในเครื่องนี้ ✓</span>
         </div>
-        <label className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" checked={bronze} onChange={(e) => resetAll(mode, e.target.checked)} />
-          ใช้ระดับทองแดง <span className="text-xs font-normal text-slate-500">(ปิด = เหลือแค่ทองกับเงิน และเริ่มรอบใหม่)</span>
-        </label>
+        <fieldset className="mb-3">
+          <legend className="mb-1 text-sm font-semibold text-slate-700">ระดับที่ใช้ <span className="text-xs font-normal text-slate-500">(เปลี่ยนแล้วเริ่มรอบใหม่ · ต้องเหลืออย่างน้อย 1 ระดับ)</span></legend>
+          <div className="flex flex-wrap gap-2">
+            {ORDER.map((k) => {
+              const on = tiersOn.includes(k)
+              return (
+                <label key={k} className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ring-1" style={{ color: TIERS[k].color, background: on ? TIERS[k].light : '#fff', '--tw-ring-color': TIERS[k].color }}>
+                  <input type="checkbox" checked={on} disabled={on && tiersOn.length === 1}
+                         onChange={() => resetAll(mode, ORDER.filter((x) => (x === k ? !on : tiersOn.includes(x))))} />
+                  {TIERS[k].label}
+                </label>
+              )
+            })}
+          </div>
+        </fieldset>
         {tiersOn.map((k) => {
           const t = TIERS[k]
           return (
@@ -353,7 +375,8 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
                 ))}
               </ul>
               <div className="flex gap-1.5">
-                <input value={draft[k]} maxLength={24} placeholder={`เพิ่มรางวัลระดับ${t.label}`} aria-label={`เพิ่มรางวัลระดับ${t.label}`}
+                <input value={draft[k]} placeholder={`เพิ่มรางวัลระดับ${t.label} (หลายอย่างคั่นด้วย , ได้)`} aria-label={`เพิ่มรางวัลระดับ${t.label}`}
+                       onPaste={(e) => { const tx = e.clipboardData?.getData('text') ?? ''; if (/[\n\r]/.test(tx)) { e.preventDefault(); addPrize(k, `${draft[k]},${tx}`) } }}
                        onChange={(e) => setDraft({ ...draft, [k]: e.target.value })}
                        onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) addPrize(k) }}
                        className="min-w-0 flex-1 rounded-lg border-2 bg-white px-2 py-1.5 text-sm outline-none" style={{ borderColor: t.color }} />
