@@ -3,7 +3,7 @@ import Animal from './Animal'
 import BombSvg from './BombSvg'
 import { ANIMALS, animalById } from '../game/constants'
 import { openRoom, newId } from '../lib/net'
-import { cleanName } from '../lib/name'
+import { cleanName, nameTaken } from '../lib/name'
 import { load, save } from '../lib/storage'
 import { beep } from '../lib/sound'
 
@@ -69,6 +69,7 @@ export default function GuestApp({ code }) {
   // ---------- หน้าเข้าห้อง ----------
   if (!joined || !mine) {
     const nameOk = cleanName(name).trim().length > 0
+    const dupe = nameOk && nameTaken(name, state?.players ?? [], me)
     const full = state && state.players.length >= 8 && !mine
     return (
       <main className={shell}>
@@ -84,7 +85,7 @@ export default function GuestApp({ code }) {
                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) join() }}
                  placeholder="พิมพ์ชื่อ"
                  className="mt-1 w-full rounded-xl border-2 border-rose-200 bg-white px-4 py-3 text-lg outline-none focus:border-rose-400" />
-          <p className="mt-1 text-xs text-rose-900/50">ใช้ได้เฉพาะตัวอักษร ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ</p>
+          <p className={`mt-1 text-xs ${dupe ? 'text-rose-600' : 'text-rose-900/50'}`}>{dupe ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : 'ใช้ได้เฉพาะตัวอักษร ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน'}</p>
 
           <div className="mt-4 text-sm font-semibold text-slate-700">เลือกสัตว์</div>
           <div className="mt-1 grid grid-cols-5 gap-1.5">
@@ -99,7 +100,7 @@ export default function GuestApp({ code }) {
               )
             })}
           </div>
-          <button onClick={join} disabled={!nameOk || !animal || full || (joined && !mine)}
+          <button onClick={join} disabled={!nameOk || dupe || !animal || full}
                   className="mt-5 w-full rounded-2xl bg-amber-400 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-lg hover:bg-amber-300 active:scale-95 disabled:opacity-40">
             {full ? 'ห้องเต็มแล้ว (8 คน)' : joined && !mine ? 'กำลังเข้าห้อง...' : 'เข้าห้อง!'}
           </button>

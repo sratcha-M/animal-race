@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Animal from './Animal'
 import { AI_BG } from '../lib/aiArt'
 import { ANIMALS, MAX_PLAYERS, MIN_PLAYERS, animalById } from '../game/constants'
-import { cleanName } from '../lib/name'
+import { cleanName, nameTaken } from '../lib/name'
 
 let nextId = Date.now()
 
@@ -12,9 +12,11 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
   const firstFree = () => ANIMALS.find((a) => !taken(a.id))?.id
 
   const [nameHint, setNameHint] = useState(false)
+  const [dupHint, setDupHint] = useState(false)
   const add = () => {
     const n = cleanName(name).trim()
     if (!n) { setNameHint(true); return }
+    if (nameTaken(n, players)) { setDupHint(true); return }
     if (players.length >= MAX_PLAYERS) return
     setPlayers([...players, { id: nextId++, name: n.slice(0, 16), animal: firstFree() }])
     setName('')
@@ -47,7 +49,7 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
       <div className="mb-5 flex gap-2">
         <input
           value={name}
-          onChange={(e) => { const v = cleanName(e.target.value); setNameHint(v !== e.target.value); setName(v) }}
+          onChange={(e) => { const v = cleanName(e.target.value); setNameHint(v !== e.target.value); setDupHint(false); setName(v) }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) add() }}
           placeholder={players.length >= MAX_PLAYERS ? `ครบ ${MAX_PLAYERS} คนแล้ว` : 'พิมพ์ชื่อผู้เล่น แล้วกดเพิ่ม'}
           disabled={players.length >= MAX_PLAYERS}
@@ -64,8 +66,8 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
         </button>
       </div>
 
-      <p className={`-mt-3 mb-4 px-1 text-sm ${nameHint ? 'text-rose-600' : 'text-rose-900/50'}`}>
-        ชื่อใช้ได้เฉพาะตัวอักษร (ไทยหรืออังกฤษ) ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ
+      <p className={`-mt-3 mb-4 px-1 text-sm ${nameHint || dupHint ? 'text-rose-600' : 'text-rose-900/50'}`}>
+        {dupHint ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : 'ชื่อใช้ได้เฉพาะตัวอักษร (ไทยหรืออังกฤษ) ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน'}
       </p>
 
       {players.length === 0 && (
@@ -86,7 +88,7 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
                 <input
                   value={p.name}
                   readOnly={p.remote}
-                  onChange={(e) => update(p.id, { name: cleanName(e.target.value) })}
+                  onChange={(e) => { const v = cleanName(e.target.value); if (!nameTaken(v, players, p.id)) update(p.id, { name: v }) }}
                   aria-label={`ชื่อผู้เล่น ${i + 1}`}
                   className="w-full rounded-lg border border-transparent px-2 py-1 text-lg font-semibold hover:border-slate-200 focus:border-rose-300 focus:outline-none"
                 />

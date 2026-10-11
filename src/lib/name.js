@@ -8,3 +8,9 @@ export function cleanName(s) {
     .slice(0, NAME_MAX)
 }
 export const isValidName = (s) => cleanName(s).trim().length > 0
+// ชื่อซ้ำ: เทียบแบบไม่สนตัวพิมพ์เล็ก/ใหญ่ และไม่นับช่องว่างหัวท้าย
+const key = (s) => cleanName(s).trim().toLowerCase()
+export const nameTaken = (name, players, exceptId) => {
+  const k = key(name)
+  return !!k && players.some((p) => p.id !== exceptId && key(p.name) === k)
+}

@@ -9,7 +9,7 @@ import GuestApp from './components/GuestApp'
 import { load, save } from './lib/storage'
 import { ANIMALS, MAX_PLAYERS } from './game/constants'
 import { openRoom, newId, newRoomCode, normCode } from './lib/net'
-import { cleanName } from './lib/name'
+import { cleanName, nameTaken } from './lib/name'
 
 const validPlayers = (ps) =>
   Array.isArray(ps) ? ps.filter((p) => p && p.name && !p.remote && ANIMALS.some((a) => a.id === p.animal)) : []
@@ -68,6 +68,7 @@ function HostApp() {
       for (const g of guests) {
         if (kicked.current.has(g.id)) continue
         const name = cleanName(g.name).trim() || 'เพื่อน'
+        if (nameTaken(name, next, g.id)) continue
         const free = (id, self) => ANIMALS.some((a) => a.id === id) && !next.some((p) => p.animal === id && p.id !== self)
         const i = next.findIndex((p) => p.id === g.id)
         if (i >= 0) {
