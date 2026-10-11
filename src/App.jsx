@@ -39,6 +39,8 @@ function HostApp() {
   const [room, setRoom] = useState(null) // { code }
   const [guests, setGuests] = useState([])
   const [bombNet, setBombNet] = useState(null)
+  const [miniNet, setMiniNet] = useState(null) // สถานะเกมย่อยที่ส่งให้มือถือเพื่อน (เช่น กาชาปอง)
+  const handlers = useRef({})                    // ข้อความจากมือถือเพื่อน -> เกมที่กำลังเล่น
   const net = useRef(null)
   const hostId = useRef(newId())
   const kicked = useRef(new Set())
@@ -47,7 +49,7 @@ function HostApp() {
   const openHostRoom = () => {
     const code = newRoomCode()
     net.current = openRoom(code, hostId.current, {
-      onMessage: (m) => { if (m.type === 'pass') passHandler.current?.(m.from) },
+      onMessage: (m) => { if (m.type === 'pass') passHandler.current?.(m.from); else handlers.current[m.type]?.(m.from, m.data) },
       onPeers: (ps) => setGuests(ps.filter((p) => p.role === 'guest' && p.id !== hostId.current)),
     })
     net.current.track({ role: 'host' })
@@ -86,6 +88,10 @@ function HostApp() {
     })
   }, [guests, room])
 
+  const registerHandler = useCallback((type, fn) => {
+    handlers.current[type] = fn
+    return () => { if (handlers.current[type] === fn) delete handlers.current[type] }
+  }, [])
   const removePlayer = useCallback((p) => {
     if (p.remote) { kicked.current.add(p.id); net.current?.send('kick', { id: p.id }) }
   }, [])
@@ -107,10 +113,11 @@ function HostApp() {
       race: screen === 'results' ? { ranking: results.map((r) => r.id), times: results.map((r) => Number(r.time.toFixed(2))) } : null,
       summary: screen === 'summary' ? history.map((h) => h.player.id) : null,
       bomb: screen === 'bomb' ? bombNet : null,
+      mini: MINI_BY_ID[screen] ? miniNet : null,
     }
     stateRef.current = s
     net.current?.send('state', s)
-  }, [room, screen, tab, players, racers, results, history, bombNet])
+  }, [room, screen, tab, players, racers, results, history, bombNet, miniNet])
   useEffect(() => {
     if (!room) return
     const t = setInterval(() => stateRef.current && net.current?.send('state', stateRef.current), 2000)
@@ -173,7 +180,7 @@ function HostApp() {
                 registerPass={(fn) => { passHandler.current = fn; return () => { passHandler.current = null } }} />
         </div>
       )}
-      {MINI_BY_ID[screen] && (() => { const { Comp } = MINI_BY_ID[screen]; return <Comp key={screen} players={players} onBack={() => setScreen('setup')} /> })()}
+      {MINI_BY_ID[screen] && (() => { const { Comp } = MINI_BY_ID[screen]; return <Comp key={screen} players={players} onBack={() => setScreen('setup')} room={!!room} onNet={setMiniNet} registerHandler={registerHandler} /> })()}
       {screen === 'race' && (
         <div className="h-dvh">
           <Race key={raceKey} players={racers} round={history.length + 1} eliminating={history.length > 0}

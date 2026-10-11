@@ -5,6 +5,7 @@ import { ANIMALS, animalById } from '../game/constants'
 import { openRoom, newId } from '../lib/net'
 import { cleanName, nameTaken } from '../lib/name'
 import { MINI_BY_ID } from '../games'
+import { TIERS } from './Gacha'
 import { load, save } from '../lib/storage'
 import { beep } from '../lib/sound'
 
@@ -136,6 +137,12 @@ export default function GuestApp({ code }) {
     const out = b.activeIds && !b.activeIds.includes(me)
     return <Center title={out ? 'รอบนี้คุณดูเชียร์' : 'รอจุดชนวน...'} sub="ระเบิดจะเริ่มที่ใครก็ได้ ดูมือถือไว้ให้ดี" me={mine} bomb />
   }
+  // กาชาปอง: เพื่อนกดหมุนเองบนมือถือ ผลขึ้นที่จอหลัก (และโชว์ที่นี่ด้วยหลังเปิดไข่)
+  if (s.screen === 'gacha') {
+    const g = s.mini
+    if (!g || g.mode !== 'phones') return <Center title="กาชาปองกำลังเล่นอยู่" sub="ดูผลที่จอหลักได้เลย" me={mine} />
+    return <GachaPhone g={g} me={me} mine={mine} onSpin={() => net.current.send('gacha-spin', {})} />
+  }
   // แข่งวิ่ง
   if (s.screen === 'race') {
     const inRace = s.racers?.includes(me)
@@ -218,6 +225,39 @@ function HoldingBomb({ onPass, auto }) {
               className="w-full max-w-xs rounded-3xl bg-white px-6 py-8 text-4xl font-extrabold text-rose-600 shadow-2xl active:scale-95">
         {sent ? 'กำลังส่ง...' : 'ส่งต่อ! ➜'}
       </button>}
+    </main>
+  )
+}
+
+function GachaPhone({ g, me, mine, onSpin }) {
+  const [sent, setSent] = useState(false)
+  const result = g.results?.[me]
+  const spun = g.spun?.includes(me) || sent
+  useEffect(() => { if (g.spun?.length === 0) setSent(false) }, [g.spun]) // เริ่มรอบใหม่ให้กดได้อีก
+  if (result) {
+    const t = TIERS[result.tier]
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center" style={{ background: t.light }}>
+        <div className="text-lg font-extrabold" style={{ color: t.color }}>คุณได้ระดับ {t.label}!</div>
+        <div className="float w-44"><Animal animal={mine.animal} number={mine.num} running /></div>
+        <h1 className="pop text-4xl font-extrabold text-slate-800">{result.prize}</h1>
+        <p className="text-sm text-slate-500">{mine.name}</p>
+      </main>
+    )
+  }
+  return (
+    <main className={`${shell} flex flex-col items-center justify-center gap-5 text-center`}>
+      <h1 className="text-3xl font-extrabold text-rose-500">กาชาปอง</h1>
+      <div className={spun ? 'egg-out' : 'float'}>
+        <svg viewBox="0 0 100 100" className="w-40 overflow-visible" aria-hidden="true">
+          <path d="M5 50 A45 45 0 0 0 95 50 Z" fill="#fff" stroke="#e5e7eb" strokeWidth="2" />
+          <path d="M5 50 A45 45 0 0 1 95 50 Z" fill="#ff8fab" stroke="#fff" strokeWidth="2" />
+        </svg>
+      </div>
+      {spun
+        ? <p className="text-xl font-bold text-rose-600">หมุนแล้ว! ลุ้นดูผลที่จอหลัก...</p>
+        : <button onClick={() => { setSent(true); onSpin(); try { navigator.vibrate?.(80) } catch { /* ignore */ } beep(500, 0.08, 'triangle') }}
+                  className="w-full max-w-xs rounded-3xl bg-amber-400 px-6 py-8 text-4xl font-extrabold text-amber-950 shadow-xl active:scale-95">หมุนเลย!</button>}
     </main>
   )
 }
