@@ -120,7 +120,7 @@ export default function Balloon({ players, onBack, onNet, registerHandler }) {
     const ok = () => run.current === id
     finishing.current = false
     setPhase('float'); setPopped([]); setWinner(null); setModal(false); setTense(false); setNeedle(null); setCanTap(false)
-    endsAt.current = Date.now() + (effDur + 2.4) * 1000; setSecLeft(effDur + 3)
+    if (mode === 'auto' || dur > 0) { endsAt.current = Date.now() + (effDur + 2.4) * 1000; setSecLeft(effDur + 3) } else { endsAt.current = 0; setSecLeft(null) }
     if (mode === 'auto') { await sleep(2400); if (ok()) runPops(shuffle(alive), effDur - 2.4 > 3 ? effDur - 2.4 : effDur, ok); return }
     await sleep(2400); if (!ok()) return
     setCanTap(true)

@@ -66,7 +66,7 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
   const reset = () => { setOutIds([]); setHist([]); again() }
 
   useMiniNet({ onNet, registerHandler },
-    { phase: busy ? 'busy' : winner ? 'done' : 'aim', msg, winnerId: winner?.id ?? null },
+    { phase: winner ? 'done' : busy ? 'busy' : 'aim', msg, winnerId: winner?.id ?? null },
     { 'dart-throw': () => { if (!winner) throwDart() } })
 
   return (
