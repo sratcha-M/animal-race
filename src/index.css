@@ -102,3 +102,18 @@ body { background: #fff4f8; }
 
 @keyframes wobble { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
 .claw-wobble { animation: wobble .22s linear infinite; transform-origin: 50% 0; }
+
+@keyframes egg-out { 0% { transform: translateY(-90px) scale(.5) rotate(0); opacity: 0; } 50% { opacity: 1; } 75% { transform: translateY(10px) rotate(260deg); } 100% { transform: translateY(0) rotate(360deg); } }
+@keyframes cap-top { to { transform: translate(-34px, -56px) rotate(-38deg); opacity: 0; } }
+@keyframes cap-bot { to { transform: translate(30px, 22px) rotate(30deg); opacity: 0; } }
+@keyframes crank { to { transform: rotate(360deg); } }
+@keyframes balloon-bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-14px) rotate(3deg); } }
+@keyframes burst { from { transform: scale(.4); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
+@keyframes dash { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.egg-out { animation: egg-out .9s ease-out both; }
+.cap-top { animation: cap-top .6s ease-in forwards; }
+.cap-bot { animation: cap-bot .6s ease-in forwards; }
+.cranking { animation: crank .5s linear infinite; }
+.balloon-bob { animation: balloon-bob 2.2s ease-in-out infinite alternate; }
+.burst { animation: burst .45s ease-out forwards; }
+.trace { animation: dash 2.4s linear forwards; }
