@@ -1,0 +1,22 @@
+# CI: ตรวจว่าโค้ด build ผ่านทุกครั้งที่ push หรือเปิด Pull Request
+# CD: Vercel (เชื่อมกับ repo นี้) จะ deploy ให้เอง
+#   - push เข้า main  -> ขึ้นเว็บจริง (production)
+#   - เปิด Pull Request -> ได้ลิงก์ preview แยกไว้ทดสอบ
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build

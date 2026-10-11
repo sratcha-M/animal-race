@@ -2,22 +2,25 @@ import { useState } from 'react'
 import Animal from './Animal'
 import { AI_BG } from '../lib/aiArt'
 import { ANIMALS, MAX_PLAYERS, MIN_PLAYERS, animalById } from '../game/constants'
+import { cleanName } from '../lib/name'
 
 let nextId = Date.now()
 
-export default function Setup({ players, setPlayers, onStart }) {
+export default function Setup({ players, setPlayers, onStart, onRemove, tabs = null, title = 'สัตว์น้อยวิ่งแข่ง', subtitle = 'เพิ่มผู้เล่น เลือกสัตว์ที่ชอบ แล้วลุ้นว่าใครเข้าเส้นชัยก่อน', startLabel = 'เริ่มแข่ง!' }) {
   const [name, setName] = useState('')
   const taken = (animalId, exceptId) => players.find((p) => p.animal === animalId && p.id !== exceptId)
   const firstFree = () => ANIMALS.find((a) => !taken(a.id))?.id
 
+  const [nameHint, setNameHint] = useState(false)
   const add = () => {
-    const n = name.trim() || `ผู้เล่น ${players.length + 1}`
+    const n = cleanName(name).trim()
+    if (!n) { setNameHint(true); return }
     if (players.length >= MAX_PLAYERS) return
     setPlayers([...players, { id: nextId++, name: n.slice(0, 16), animal: firstFree() }])
     setName('')
   }
   const update = (id, patch) => setPlayers(players.map((p) => (p.id === id ? { ...p, ...patch } : p)))
-  const remove = (id) => setPlayers(players.filter((p) => p.id !== id))
+  const remove = (id) => { const p = players.find((x) => x.id === id); if (p) onRemove?.(p); setPlayers(players.filter((x) => x.id !== id)) }
   const addDemo = () => {
     const names = ['สมชาย', 'สมหญิง', 'มานี', 'ปิติ']
     const list = []
@@ -29,6 +32,7 @@ export default function Setup({ players, setPlayers, onStart }) {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
+      {tabs}
       <header className="relative isolate mb-6 overflow-hidden rounded-3xl pb-4 pt-2 text-center">
         {AI_BG && (
           <img src={AI_BG} alt="" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_60%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" />
@@ -36,14 +40,14 @@ export default function Setup({ players, setPlayers, onStart }) {
         <div className="float mx-auto mb-1 w-80 max-w-full">
           <div className="flex items-end justify-center gap-1"><div className="w-24"><Animal animal="rabbit" running /></div><div className="w-28"><Animal animal="cat" number="★" running /></div><div className="w-24"><Animal animal="pig" running /></div></div>
         </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-rose-500 sm:text-5xl">สัตว์น้อยวิ่งแข่ง</h1>
-        <p className="mt-1 text-rose-900/70">เพิ่มผู้เล่น เลือกสัตว์ที่ชอบ แล้วลุ้นว่าใครเข้าเส้นชัยก่อน</p>
+        <h1 className="text-4xl font-extrabold tracking-tight text-rose-500 sm:text-5xl">{title}</h1>
+        <p className="mt-1 text-rose-900/70">{subtitle}</p>
       </header>
 
       <div className="mb-5 flex gap-2">
         <input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => { const v = cleanName(e.target.value); setNameHint(v !== e.target.value); setName(v) }}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) add() }}
           placeholder={players.length >= MAX_PLAYERS ? `ครบ ${MAX_PLAYERS} คนแล้ว` : 'พิมพ์ชื่อผู้เล่น แล้วกดเพิ่ม'}
           disabled={players.length >= MAX_PLAYERS}
@@ -59,6 +63,10 @@ export default function Setup({ players, setPlayers, onStart }) {
           + เพิ่ม
         </button>
       </div>
+
+      <p className={`-mt-3 mb-4 px-1 text-sm ${nameHint ? 'text-rose-600' : 'text-rose-900/50'}`}>
+        ชื่อใช้ได้เฉพาะตัวอักษร (ไทยหรืออังกฤษ) ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ
+      </p>
 
       {players.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed border-rose-300 bg-white/60 p-8 text-center text-rose-800">
@@ -77,11 +85,15 @@ export default function Setup({ players, setPlayers, onStart }) {
               <div className="min-w-0 flex-1">
                 <input
                   value={p.name}
-                  onChange={(e) => update(p.id, { name: e.target.value.slice(0, 16) })}
+                  readOnly={p.remote}
+                  onChange={(e) => update(p.id, { name: cleanName(e.target.value) })}
                   aria-label={`ชื่อผู้เล่น ${i + 1}`}
                   className="w-full rounded-lg border border-transparent px-2 py-1 text-lg font-semibold hover:border-slate-200 focus:border-rose-300 focus:outline-none"
                 />
-                <div className="px-2 text-sm text-slate-500">{animalById(p.animal).name} · เบอร์ {i + 1}</div>
+                <div className="px-2 text-sm text-slate-500">
+                  {animalById(p.animal).name} · เบอร์ {i + 1}
+                  {p.remote && <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">มือถือ</span>}
+                </div>
               </div>
               <button
                 onClick={() => remove(p.id)}
@@ -100,7 +112,7 @@ export default function Setup({ players, setPlayers, onStart }) {
                     key={a.id}
                     type="button"
                     onClick={() => update(p.id, { animal: a.id })}
-                    disabled={!!owner}
+                    disabled={!!owner || p.remote}
                     title={owner ? `${a.name} — ${owner.name} เลือกแล้ว` : a.name}
                     aria-label={a.name}
                     aria-pressed={selected}
@@ -124,7 +136,7 @@ export default function Setup({ players, setPlayers, onStart }) {
           disabled={!ready}
           className="w-full max-w-sm rounded-2xl bg-amber-400 px-8 py-4 text-2xl font-extrabold text-amber-950 shadow-lg shadow-amber-500/30 hover:bg-amber-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          เริ่มแข่ง!
+          {startLabel}
         </button>
         <p className="text-sm text-rose-900/60">
           {players.length < MIN_PLAYERS ? `ต้องมีผู้เล่นอย่างน้อย ${MIN_PLAYERS} คน` : `${players.length} / ${MAX_PLAYERS} คน`}

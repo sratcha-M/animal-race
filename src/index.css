@@ -84,3 +84,18 @@ body { background: #fff4f8; }
   box-shadow: inset 0 0 80px 20px rgba(99, 102, 241, .35);
 }
 @keyframes pulse { to { transform: scale(1.08); } }
+
+/* ===== ระเบิดเวลา ===== */
+.bomb { transition: left .28s cubic-bezier(.3,1.4,.5,1), top .28s cubic-bezier(.3,1.4,.5,1); }
+.bomb svg { animation: bombpulse var(--pulse, .7s) ease-in-out infinite alternate; }
+@keyframes bombpulse { from { transform: scale(1) rotate(-6deg); } to { transform: scale(1.12) rotate(6deg); } }
+.spark { animation: spark .15s linear infinite alternate; }
+@keyframes spark { from { transform: scale(.7) rotate(0deg); } to { transform: scale(1.15) rotate(20deg); } }
+.holder > div:first-child { animation: holdshake .18s ease-in-out infinite alternate; }
+@keyframes holdshake { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+.boom-shake { animation: bshake .5s linear 1; }
+@keyframes bshake { 0%,100% { transform: none; } 20% { transform: translate(-8px, 4px); } 40% { transform: translate(7px, -6px); } 60% { transform: translate(-5px, -3px); } 80% { transform: translate(4px, 5px); } }
+.boom-flash { background: radial-gradient(circle at 50% 45%, #fff 0%, #ffd54d 25%, #ff6b3d 50%, transparent 75%); animation: flash .9s ease-out forwards; }
+@keyframes flash { from { opacity: 1; transform: scale(.4); } to { opacity: 0; transform: scale(2.2); } }
+.sooty { filter: grayscale(.6) brightness(.75) sepia(.3); transform: rotate(-8deg); }
+@media (prefers-reduced-motion: reduce) { .bomb svg, .spark, .holder > div:first-child, .boom-shake { animation: none; } }

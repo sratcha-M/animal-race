@@ -19,3 +19,11 @@ python3 scripts/gen_assets.py          # ถ้าแมวหันซ้าย
 
 ## ปรับความลุ้น
 `src/game/constants.js` → `EVENTS` (เร่ง/เหนื่อย/สะดุด/หลับ/เจอของกิน), `RUBBER_BAND` (ความสูสี), `SLOWMO_*` (สโลว์โมชันตอนเข้าเส้นชัย)
+
+## เล่นกับเพื่อนจากมือถือ (ห้องออนไลน์)
+1. สมัคร https://supabase.com (ฟรี) → New project
+2. Project Settings → API → คัดลอก **Project URL** และ **anon public key**
+3. สร้างไฟล์ `.env.local` ตาม `.env.example` (หรือใส่เป็น Environment Variables ใน Vercel)
+4. deploy ใหม่ → หน้าแรกกด "ชวนเพื่อนเข้าห้อง" → เพื่อนสแกน QR พิมพ์ชื่อ เลือกสัตว์ ก็เข้ามาเล่นได้
+ไม่ต้องสร้างตาราง ใช้แค่ Realtime (Broadcast + Presence)
+ถ้ายังไม่ใส่ค่า ปุ่มห้องจะทำงานแบบทดสอบ (เปิดได้เฉพาะแท็บอื่นในเครื่องเดียวกัน)
