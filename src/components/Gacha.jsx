@@ -25,6 +25,7 @@ export default function Gacha({ players, onBack }) {
   const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
   const [eggs, setEggs] = useState(() => deal(roster))
   const [drawn, setDrawn] = useState([])
+  const [opened, setOpened] = useState([]) // ผลที่เปิดไข่แล้ว แสดงด้านล่างทันที
   const [phase, setPhase] = useState('ready') // ready | rolling | egg | open
   const [prizes, setPrizes] = useState(() => ({ ...DEFAULT_PRIZES, ...load('animal-race:gacha-prizes', {}) }))
   const timer = useRef(null)
@@ -40,9 +41,9 @@ export default function Gacha({ players, onBack }) {
     for (let k = 0; k < 6; k++) setTimeout(() => beep(300 + k * 40, 0.06, 'square', 0.05), k * 140)
     timer.current = setTimeout(() => { setDrawn((d) => [...d, eggs[d.length]]); setPhase('egg') }, 900)
   }
-  const open = () => { setPhase('open'); fanfare() }
+  const open = () => { setPhase('open'); setOpened((o) => [...o, current]); fanfare() }
   const next = () => setPhase('ready')
-  const restart = () => { setEggs(deal(roster)); setDrawn([]); setPhase('ready') }
+  const restart = () => { setEggs(deal(roster)); setDrawn([]); setOpened([]); setPhase('ready') }
 
   return (
     <Shell title="กาชาปอง" right={`เหลือ ${left} ไข่`} onBack={onBack}>
@@ -97,6 +98,19 @@ export default function Gacha({ players, onBack }) {
         {(phase === 'ready' || phase === 'open') && left < 1 && <BigButton onClick={restart}>สับไข่ใหม่</BigButton>}
       </div>
 
+      {opened.length > 0 && (
+        <ul className="mt-4 space-y-1 text-sm" aria-live="polite">
+          {opened.map((d, i) => (
+            <li key={i} className="pop flex items-center gap-2 rounded-lg bg-white/90 px-3 py-2 ring-1 ring-rose-100">
+              <span className="w-5 text-rose-400">{i + 1}</span>
+              <span className="min-w-0 flex-1 truncate text-base font-extrabold">{d.player.name}</span>
+              <span className="rounded-full px-2 py-0.5 text-xs font-extrabold text-white" style={{ background: TIERS[d.tier].color }}>{TIERS[d.tier].label}</span>
+              <span className="max-w-[40%] truncate text-xs text-slate-500">{prizes[d.tier]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* ของรางวัลแต่ละระดับ */}
       <div className="mt-4 grid grid-cols-3 gap-2">
         {Object.entries(TIERS).map(([k, t]) => (
@@ -108,25 +122,6 @@ export default function Gacha({ players, onBack }) {
         ))}
       </div>
 
-      {drawn.length > 0 && (
-        <ul className="mt-4 space-y-1 text-sm">
-          {drawn.map((d, i) => {
-            const shown = !(i === drawn.length - 1 && phase !== 'open')
-            return (
-              <li key={i} className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-1.5 ring-1 ring-rose-100">
-                <span className="w-5 text-rose-400">{i + 1}</span>
-                {shown ? (
-                  <>
-                    <span className="min-w-0 flex-1 truncate font-bold">{d.player.name}</span>
-                    <span className="rounded-full px-2 py-0.5 text-xs font-extrabold text-white" style={{ background: TIERS[d.tier].color }}>{TIERS[d.tier].label}</span>
-                    <span className="max-w-[40%] truncate text-xs text-slate-500">{prizes[d.tier]}</span>
-                  </>
-                ) : <span className="text-slate-400">ยังไม่เปิดไข่...</span>}
-              </li>
-            )
-          })}
-        </ul>
-      )}
     </Shell>
   )
 }
