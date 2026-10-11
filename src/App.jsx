@@ -5,6 +5,7 @@ import Results from './components/Results'
 import Summary from './components/Summary'
 import Bomb from './components/Bomb'
 import Claw from './components/Claw'
+import Wheel from './components/Wheel'
 import RoomPanel from './components/RoomPanel'
 import GuestApp from './components/GuestApp'
 import { load, save } from './lib/storage'
@@ -23,7 +24,7 @@ export default function App() {
 
 function HostApp() {
   const [screen, setScreen] = useState('setup') // setup | race | results | summary | bomb
-  const [tab, setTab] = useState(() => load('animal-race:tab', 'race')) // race | bomb | claw
+  const [tab, setTab] = useState(() => load('animal-race:tab', 'race')) // race | bomb | claw | wheel
   const [players, setPlayers] = useState(() => validPlayers(load('animal-race:players', [])))
   const [results, setResults] = useState([])
   const [wins, setWins] = useState(() => load('animal-race:wins', {}))
@@ -160,6 +161,9 @@ function HostApp() {
           {...(tab === 'bomb'
             ? { title: 'ระเบิดเวลา', subtitle: 'ส่งระเบิดต่อกันไปเรื่อย ๆ ระเบิดอยู่ในมือใครตอนตูม คนนั้นโดน!', startLabel: 'ไปเล่นระเบิดเวลา!',
                 onStart: () => { trimNames(); setBombNet(null); setScreen('bomb') } }
+            : tab === 'wheel'
+              ? { title: 'วงล้อสุ่ม', subtitle: 'ชื่อทุกคนอยู่บนวงล้อ หมุนแล้วลูกศรชี้ใคร คนนั้นโดน!', startLabel: 'ไปที่วงล้อ!',
+                  onStart: () => { trimNames(); setScreen('wheel') } }
             : tab === 'claw'
               ? { title: 'ตู้คีบตุ๊กตา', subtitle: 'ชื่อทุกคนอยู่บนตุ๊กตา ก้ามปูสุ่มคีบ ใครถูกคีบคนนั้นโดน!', startLabel: 'ไปที่ตู้คีบ!',
                   onStart: () => { trimNames(); setScreen('claw') } }
@@ -173,6 +177,7 @@ function HostApp() {
                 registerPass={(fn) => { passHandler.current = fn; return () => { passHandler.current = null } }} />
         </div>
       )}
+      {screen === 'wheel' && <Wheel players={players} onBack={() => setScreen('setup')} />}
       {screen === 'claw' && <Claw players={players} onBack={() => setScreen('setup')} />}
       {screen === 'race' && (
         <div className="h-dvh">
@@ -198,12 +203,13 @@ function GameTabs({ tab, setTab }) {
     { id: 'race', label: 'แข่งวิ่ง' },
     { id: 'bomb', label: 'ระเบิดเวลา' },
     { id: 'claw', label: 'ตู้คีบ' },
+    { id: 'wheel', label: 'วงล้อ' },
   ]
   return (
     <div role="tablist" aria-label="เลือกเกม" className="mx-auto mb-4 flex w-full max-w-md rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
       {tabs.map((t) => (
         <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-                className={`flex-1 rounded-xl px-2 py-2 text-base font-bold sm:px-4 sm:text-lg transition ${tab === t.id ? 'bg-rose-500 text-white shadow' : 'text-rose-600 hover:bg-rose-50'}`}>
+                className={`flex-1 rounded-xl px-1 py-2 text-sm font-bold sm:px-4 sm:text-lg transition ${tab === t.id ? 'bg-rose-500 text-white shadow' : 'text-rose-600 hover:bg-rose-50'}`}>
           {t.label}
         </button>
       ))}
