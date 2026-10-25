@@ -45,13 +45,17 @@ export default function Cards({ players, onBack, onNet, registerHandler }) {
     setPhase('shuffle')
     let slots = { ...base }
     const ids = cards.map((c) => c.id)
-    for (let k = 0; k < 14; k++) {
+    // สลับมากขึ้นเมื่อไพ่เยอะ (ให้กระจายพอ) / ไพ่ 2 ใบ: สุ่มว่าสลับเลขคู่หรือคี่ ไม่งั้นไพ่กลับที่เดิมทุกครั้ง
+    const swaps = Math.max(14, Math.ceil(ids.length * 1.5)) + (ids.length === 2 ? randInt(2) : 0)
+    const gap = ids.length > 8 ? 260 : 360
+    for (let k = 0; ; k++) {
+      if (k >= swaps && (ids.length === 2 || ids.some((id) => slots[id] !== base[id]))) break
       const a = ids[randInt(ids.length)]
       let b = ids[randInt(ids.length)]
       while (b === a && ids.length > 1) b = ids[randInt(ids.length)]
       slots = { ...slots, [a]: slots[b], [b]: slots[a] }
       setSlotOf(slots); beep(260 + (k % 4) * 40, 0.04, 'triangle', 0.04)
-      await sleep(360); if (!ok()) return
+      await sleep(gap); if (!ok()) return
     }
     busy.current = false
     setPhase('play')

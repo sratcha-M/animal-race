@@ -139,6 +139,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   const [spun, setSpun] = useState([])            // id ผู้เล่นที่หมุนแล้ว
   const [stage, setStage] = useState(null)        // { e, phase: 'egg' | 'open' }
   const bag = useRef(outcomes(roster.length, tiersOn, prizes, repeat))
+  const given = useRef([])                    // ผล (ยังไม่เปิด) ที่แจกจากถุงในโหมดมือถือไปแล้ว ใช้เติมถุงใหม่เมื่อมีคนเข้าห้องเพิ่ม
   const queue = useRef([])
   const pumping = useRef(false)
   const alive = useRef(true)
@@ -158,7 +159,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
 
   const resetAll = (m = mode, tiers = tiersOn, rep = repeat) => {
     timers.current.forEach(clearTimeout); timers.current = []
-    queue.current = []; pumping.current = false
+    queue.current = []; pumping.current = false; given.current = []
     tiersRef.current = tiers; repeatRef.current = rep
     bag.current = outcomes(rosterRef.current.length, tiers, prizesRef.current, rep)
     setEggs(deal(rosterRef.current, outcomes(rosterRef.current.length, tiers, prizesRef.current, rep))); setRepeat(rep); setOpened([]); setDrawn(0); setPhase('ready'); setAllPhase('ready'); setSpun([]); setStage(null); setMode(m); setTiersOn(tiers)
@@ -169,7 +170,15 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   useEffect(() => {
     if (lastCount.current === roster.length) return
     lastCount.current = roster.length
-    if (modeRef.current !== 'phones' && opened.length === 0) resetAll()
+    if (modeRef.current === 'phones') {
+      // คนเข้า/ออกระหว่างหมุนบนมือถือ: สร้างถุงใหม่ให้พอดีจำนวนคน แล้วหักผลที่แจกไปแล้วออก คนที่เข้ามาทีหลังจะได้ระดับสูงได้เหมือนกัน
+      const fresh = outcomes(rosterRef.current.length, tiersRef.current, prizesRef.current, repeatRef.current)
+      for (const g of given.current) {
+        const i = fresh.findIndex((f) => f.tier === g.tier && f.prize === g.prize)
+        if (i >= 0) fresh.splice(i, 1)
+      }
+      bag.current = fresh
+    } else if (opened.length === 0) resetAll()
   }, [roster.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------- ทีละใบ ----------
@@ -222,6 +231,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
     const p = rosterRef.current.find((x) => x.id === id)
     if (!p) return
     const out = bag.current.pop() ?? (repeatRef.current ? { tier: tiersRef.current[tiersRef.current.length - 1] } : { tier: 'none', prize: null })
+    given.current.push(out)
     spunRef.current = [...spunRef.current, id]
     setSpun(spunRef.current)
     queue.current.push({ player: p, ...out, shell: pick(PASTELS) })

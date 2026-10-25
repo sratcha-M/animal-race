@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Shell, BigButton } from './MiniShell'
+import { shuffle } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
 import { useMiniNet } from '../lib/useMiniNet'
@@ -30,8 +31,11 @@ function trace(rungs, start, n) {
 }
 
 export default function Ladder({ players, onBack, onNet, registerHandler }) {
-  const roster = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
-  const n = roster.length
+  const base = useMemo(() => players.map((p, i) => ({ ...p, num: i + 1 })), [players])
+  const n = base.length
+  // เส้นขวางมีไม่กี่ระดับ คนที่ยืนริมสุดจึงมักได้ช่องใกล้ตัวเอง: สุ่มลำดับคนในแต่ละรอบให้ทุกคนมีโอกาสได้ทุกช่องเท่ากัน
+  const [perm, setPerm] = useState(() => shuffle([...Array(n).keys()]))
+  const roster = useMemo(() => (perm.length === n ? perm.map((i) => base[i]) : base), [perm, base, n])
   const [rungs, setRungs] = useState(() => makeRungs(n))
   const [slots, setSlots] = useState(() => { const s = load('animal-race:ladder-slots', []); return Array.from({ length: n }, (_, i) => s[i] || DEFAULT_SLOTS[i % DEFAULT_SLOTS.length]) })
   const [shown, setShown] = useState([]) // index ของคนที่ปล่อยเส้นแล้ว (เส้นกำลังไหลลง)
@@ -46,7 +50,7 @@ export default function Ladder({ players, onBack, onNet, registerHandler }) {
   const firstRun = useRef(true)
   useEffect(() => {
     if (firstRun.current) { firstRun.current = false; return }
-    setRungs(makeRungs(n)); setShown([]); setDone([])
+    setRungs(makeRungs(n)); setPerm(shuffle([...Array(n).keys()])); setShown([]); setDone([])
     setSlots((prev) => Array.from({ length: n }, (_, i) => prev[i] || DEFAULT_SLOTS[i % DEFAULT_SLOTS.length]))
   }, [n])
 
@@ -62,7 +66,7 @@ export default function Ladder({ players, onBack, onNet, registerHandler }) {
   }
   useEffect(() => { if (n > 0 && done.length === n) { const t = setTimeout(fanfare, 250); return () => clearTimeout(t) } return undefined }, [done.length, n]) // eslint-disable-line react-hooks/exhaustive-deps
   const revealAll = () => { roster.forEach((_, i) => setTimeout(() => reveal(i), i * 400)) }
-  const reroll = () => { setRungs(makeRungs(n)); setShown([]); setDone([]) }
+  const reroll = () => { setRungs(makeRungs(n)); setPerm(shuffle([...Array(n).keys()])); setShown([]); setDone([]) }
   const setSlot = (i, v) => { const s = slots.map((t, k) => (k === i ? v : t)); setSlots(s); save('animal-race:ladder-slots', s) }
 
   useMiniNet({ onNet, registerHandler },

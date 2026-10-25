@@ -35,6 +35,7 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
   const [winner, setWinner] = useState(null)
   const [hit, setHit] = useState(null)         // index ช่องที่ลูกดอกปัก
   const [hist, setHist] = useState([])
+  const [boardRot, setBoardRot] = useState(() => rand(0, 360)) // เป้าเล็งแกว่งในบางทิศมากกว่า: หมุนกระดานสุ่มทุกรอบให้ทุกช่องมีโอกาสเท่ากัน
   const [throws, setThrows] = useState(0)
   const raf = useRef(0)
   const live = useRef(true)
@@ -74,13 +75,16 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
       setMsg('พลาดกระดาน! ปาใหม่'); await sleep(1100); setDart(null); setBusy(false); return
     }
     const ang = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360
-    const idx = Math.min(n - 1, Math.floor(ang / slice))
+    const idx = Math.min(n - 1, Math.floor((((ang - boardRot) % 360) + 360) % 360 / slice))
     const w = alive[idx]
     setHit(idx); setHist((h) => [...h, w]); setMsg(`โดนช่องของ ${w.name}!`); fanfare()
     await sleep(1100); setWinner(w)
   }
 
-  const again = () => { setWinner(null); setDart(null); setMsg(''); setBusy(false); setHit(null) }
+  const again = () => {
+    setWinner(null); setDart(null); setMsg(''); setHit(null)
+    setBoardRot(rand(0, 360)); setBusy(true); setTimeout(() => setBusy(false), 750) // รอกระดานหมุนเสร็จก่อนปา
+  }
   const eliminate = () => { const w = winner; again(); setOutIds((o) => [...o, w.id]) }
   const reset = () => { setOutIds([]); setHist([]); again() }
 
@@ -117,6 +121,7 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
           <circle cx="120" cy="-6" r="4" fill="#cbd5e1" stroke="#475569" strokeWidth="1.5" />
           <circle cx={C} cy={C} r={R_EDGE} fill="#231f1d" stroke="#0f0d0c" strokeWidth="3" />
           <circle cx={C} cy={C} r={R_EDGE - 3} fill="none" stroke="#4a4340" strokeWidth="1" />
+          <g style={{ transform: `rotate(${boardRot}deg)`, transformOrigin: `${C}px ${C}px`, transition: 'transform .7s ease-in-out' }}>
           {n >= 2 && alive.map((p, i) => {
             const a0 = i * slice; const a1 = (i + 1) * slice; const mid = a0 + slice / 2
             const k = parity(i)
@@ -138,6 +143,7 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
           <circle cx={C} cy={C} r={R_NAME} fill="none" stroke="#c9ced6" strokeWidth="1.2" />
           {/* ช่องที่โดน */}
           {hit != null && <path className="animate-pulse" d={wedge(hit * slice, (hit + 1) * slice, 12, R_EDGE)} fill="rgba(255,236,120,.38)" stroke="#fde047" strokeWidth="2.5" />}
+          </g>
           {/* จุดกลาง */}
           <circle cx={C} cy={C} r="12" fill="#1f9d57" stroke="#c9ced6" strokeWidth="1.2" />
           <circle cx={C} cy={C} r="5.5" fill="#d93f33" stroke="#c9ced6" strokeWidth="1" />
