@@ -9,6 +9,7 @@ import RoomPanel from './components/RoomPanel'
 import GuestApp from './components/GuestApp'
 import { load, save } from './lib/storage'
 import { ANIMALS, MAX_PLAYERS } from './game/constants'
+import { POSTERS } from './lib/aiArt'
 import { openRoom, newId, newRoomCode, normCode } from './lib/net'
 import { cleanName, nameTaken } from './lib/name'
 
@@ -164,6 +165,7 @@ function HostApp() {
             <GameTabs tab={tab} setTab={setTab} />
             <RoomPanel room={room} guests={guests.length} onOpen={openHostRoom} onClose={closeHostRoom} />
           </>}
+          poster={POSTERS[tab] ?? null}
           {...(tab === 'bomb'
             ? { title: 'ระเบิดเวลา', subtitle: 'ส่งระเบิดต่อกันไปเรื่อย ๆ ระเบิดอยู่ในมือใครตอนตูม คนนั้นโดน!', startLabel: 'ไปเล่นระเบิดเวลา!',
                 onStart: () => { trimNames(); setBombNet(null); setScreen('bomb') } }

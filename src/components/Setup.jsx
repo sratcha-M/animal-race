@@ -6,7 +6,7 @@ import { cleanName, nameTaken } from '../lib/name'
 
 let nextId = Date.now()
 
-export default function Setup({ players, setPlayers, onStart, onRemove, tabs = null, title = 'สัตว์น้อยวิ่งแข่ง', subtitle = 'เพิ่มผู้เล่น เลือกสัตว์ที่ชอบ แล้วลุ้นว่าใครเข้าเส้นชัยก่อน', startLabel = 'เริ่มแข่ง!' }) {
+export default function Setup({ players, setPlayers, onStart, onRemove, tabs = null, title = 'สัตว์น้อยวิ่งแข่ง', subtitle = 'เพิ่มผู้เล่น เลือกสัตว์ที่ชอบ แล้วลุ้นว่าใครเข้าเส้นชัยก่อน', startLabel = 'เริ่มแข่ง!', poster = null }) {
   const [name, setName] = useState('')
   const taken = (animalId, exceptId) => players.find((p) => p.animal === animalId && p.id !== exceptId)
   const firstFree = () => ANIMALS.find((a) => !taken(a.id))?.id
@@ -35,16 +35,24 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
       {tabs}
-      <header className="relative isolate mb-6 overflow-hidden rounded-3xl pb-4 pt-2 text-center">
-        {AI_BG && (
-          <img src={AI_BG} alt="" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_60%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" />
-        )}
-        <div className="float mx-auto mb-1 w-80 max-w-full">
-          <div className="flex items-end justify-center gap-1"><div className="w-24"><Animal animal="rabbit" running /></div><div className="w-28"><Animal animal="cat" number="★" running /></div><div className="w-24"><Animal animal="pig" running /></div></div>
-        </div>
-        <h1 className="text-4xl font-extrabold tracking-tight text-rose-500 sm:text-5xl">{title}</h1>
-        <p className="mt-1 text-rose-900/70">{subtitle}</p>
-      </header>
+      {poster ? (
+        <header className="mb-6 text-center">
+          <img src={poster} alt={title} className="mx-auto max-h-[28rem] w-auto max-w-full rounded-3xl object-contain shadow-xl ring-4 ring-white" />
+          <h1 className="sr-only">{title}</h1>
+          <p className="mt-3 text-rose-900/70">{subtitle}</p>
+        </header>
+      ) : (
+        <header className="relative isolate mb-6 overflow-hidden rounded-3xl pb-4 pt-2 text-center">
+          {AI_BG && (
+            <img src={AI_BG} alt="" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_60%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" />
+          )}
+          <div className="float mx-auto mb-1 w-80 max-w-full">
+            <div className="flex items-end justify-center gap-1"><div className="w-24"><Animal animal="rabbit" running /></div><div className="w-28"><Animal animal="cat" number="★" running /></div><div className="w-24"><Animal animal="pig" running /></div></div>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-rose-500 sm:text-5xl">{title}</h1>
+          <p className="mt-1 text-rose-900/70">{subtitle}</p>
+        </header>
+      )}
 
       <div className="mb-5 flex gap-2">
         <input
