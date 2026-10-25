@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Animal from './Animal'
 import BombSvg from './BombSvg'
+import { Header, BigButton, Panel, Choice } from './MiniShell'
 import { animalById } from '../game/constants'
 import { beep, boom, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
@@ -172,125 +173,98 @@ export default function Bomb({ players, onBack, onNet, registerPass }) {
   const size = n <= 4 ? 22 : n <= 6 ? 19 : 16
 
   return (
-    <div className={`flex min-h-full flex-col ${phase === 'boom' ? 'boom-shake' : ''}`}>
-      <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <button onClick={onBack} className="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-white/70">← กลับ</button>
-        <h2 className="text-xl font-extrabold text-rose-600">
-          ระเบิดเวลา{out.length > 0 && ` · เหลือ ${n} คน`}
-        </h2>
-        <span className="w-16 text-right text-sm text-rose-900/60 tabular-nums">{phase === 'live' ? `ส่ง ${passes}` : ''}</span>
-      </div>
+    <div className={`mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-4 lg:max-w-6xl ${phase === 'boom' ? 'boom-shake' : ''}`}>
+      <Header title={`ระเบิดเวลา${out.length > 0 ? ` · เหลือ ${n} คน` : ''}`} right={phase === 'live' ? `ส่ง ${passes}` : `${n} คน`} onBack={onBack} />
 
-      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center px-4 pb-6">
-        {/* สถานะ */}
-        <div className="mb-2 h-10 text-center text-lg font-bold text-rose-700">
-          {phase === 'ready' && 'เลือกวิธีส่งกับความยาวชนวน แล้วกดจุดชนวน!'}
-          {phase === 'live' && <span className="pop inline-block" key={holder}>ระเบิดอยู่ที่ <span className="text-rose-500">{holderP?.name}</span>{auto ? '' : ' รีบส่ง!'}</span>}
+      <div className="flex flex-1 flex-col items-center gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-center lg:gap-8">
+        <div className="flex w-full flex-col items-center">
+          {/* สถานะ */}
+          <div className="mb-2 min-h-10 text-center text-base font-bold text-[#24405a] sm:text-lg">
+            {phase === 'ready' && 'เลือกวิธีส่งกับความยาวชนวน แล้วกดจุดชนวน!'}
+            {phase === 'live' && <span className="pop inline-block" key={holder}>ระเบิดอยู่ที่ <span className="text-[#e0466e]">{holderP?.name}</span>{auto ? '' : ' รีบส่ง!'}</span>}
+          </div>
+
+          {/* วงผู้เล่น: ขนาดตามทั้งความกว้างและความสูงจอ */}
+          <div className="relative aspect-square w-[min(100%,calc(100dvh-11rem),40rem)] min-w-[15rem]">
+            <div className="absolute inset-[12%] rounded-full border-4 border-dashed border-[#24405a]/30 bg-white/60" />
+            {active.map((p, i) => {
+              const { left, top } = pos(i)
+              const isHolder = phase === 'live' && i === holder
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => passTo(i)}
+                  disabled={phase !== 'live' || isHolder || auto}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 transition-transform ${isHolder ? 'holder z-10 scale-110' : phase === 'live' && !auto ? 'hover:scale-105' : ''}`}
+                  style={{ left: `${left}%`, top: `${top}%`, width: `${size}%` }}
+                  aria-label={`ส่งระเบิดให้ ${p.name}`}
+                >
+                  <div className={`rounded-full p-1 ${isHolder ? 'bg-[#ffd0dc] ring-4 ring-[#ff6f91]' : ''}`}>
+                    <Animal animal={p.animal} number={p.num} running={isHolder} />
+                  </div>
+                  <div className={`mx-auto mt-1 max-w-[140%] truncate rounded-full border-2 border-[#24405a] px-2 py-0.5 text-xs font-bold sm:text-sm ${isHolder ? 'bg-[#ff6f91] text-white' : 'bg-white text-[#24405a]'}`}>
+                    {p.name}
+                  </div>
+                </button>
+              )
+            })}
+
+            {/* ระเบิด */}
+            {phase === 'live' && (
+              <div ref={bombRef} className="bomb pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
+                   style={{ left: `${hp.left}%`, top: `${hp.top}%`, width: '20%', transitionDuration: auto && (mode === 'random' || speed === 'fast') ? '.12s' : undefined }}>
+                <BombSvg className="w-full drop-shadow-lg" />
+              </div>
+            )}
+            {phase === 'ready' && (
+              <div className="absolute left-1/2 top-1/2 w-[30%] -translate-x-1/2 -translate-y-1/2">
+                <BombSvg className="float w-full drop-shadow-lg" />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* วงผู้เล่น */}
-        <div className="relative aspect-square w-full max-w-[min(100%,62vh)]">
-          <div className="absolute inset-[12%] rounded-full border-4 border-dashed border-rose-200 bg-white/50" />
-          {active.map((p, i) => {
-            const { left, top } = pos(i)
-            const isHolder = phase === 'live' && i === holder
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => passTo(i)}
-                disabled={phase !== 'live' || isHolder || auto}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 transition-transform ${isHolder ? 'holder z-10 scale-110' : phase === 'live' && !auto ? 'hover:scale-105' : ''}`}
-                style={{ left: `${left}%`, top: `${top}%`, width: `${size}%` }}
-                aria-label={`ส่งระเบิดให้ ${p.name}`}
-              >
-                <div className={`rounded-full p-1 ${isHolder ? 'bg-rose-200 ring-4 ring-rose-400' : ''}`}>
-                  <Animal animal={p.animal} number={p.num} running={isHolder} />
-                </div>
-                <div className={`mx-auto mt-1 max-w-[140%] truncate rounded-full px-2 py-0.5 text-xs font-semibold shadow sm:text-sm ${isHolder ? 'bg-rose-500 text-white' : 'bg-white text-slate-700'}`}>
-                  {p.name}
-                </div>
-              </button>
-            )
-          })}
-
-          {/* ระเบิด */}
-          {phase === 'live' && (
-            <div ref={bombRef} className="bomb pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"
-                 style={{ left: `${hp.left}%`, top: `${hp.top}%`, width: '20%', transitionDuration: auto && (mode === 'random' || speed === 'fast') ? '.12s' : undefined }}>
-              <BombSvg className="w-full drop-shadow-lg" />
-            </div>
-          )}
+        {/* แผงควบคุม */}
+        <aside className="flex w-full max-w-md flex-col gap-4 lg:max-w-none">
           {phase === 'ready' && (
-            <div className="absolute left-1/2 top-1/2 w-[30%] -translate-x-1/2 -translate-y-1/2">
-              <BombSvg className="float w-full drop-shadow-lg" />
-            </div>
-          )}
-        </div>
-
-        {/* ปุ่มควบคุม */}
-        <div className="mt-4 w-full max-w-sm">
-          {phase === 'ready' && (
-            <div className="flex flex-col gap-3">
-              <div className="text-sm font-semibold text-rose-700">วิธีส่งระเบิด</div>
-              <div className="-mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="วิธีส่งระเบิด">
-                {Object.entries(MODES).map(([k, m]) => (
-                  <button key={k} type="button" onClick={() => setMode(k)} aria-pressed={mode === k}
-                          className={`rounded-xl px-2 py-2 font-semibold ring-1 transition ${mode === k ? 'bg-sky-500 text-white ring-sky-500' : 'bg-white text-sky-700 ring-sky-200 hover:bg-sky-50'}`}>
-                    {m.label}
-                    <div className="text-[11px] font-normal opacity-80">{m.desc}</div>
-                  </button>
-                ))}
-              </div>
-              {mode === 'steady' && (
-                <div className="-mt-1 flex items-center justify-center gap-2 text-sm" role="radiogroup" aria-label="ความเร็ว">
-                  <span className="text-sky-800">ความเร็ว</span>
-                  {Object.entries(STEADY).map(([k, v]) => (
-                    <button key={k} type="button" onClick={() => setSpeed(k)} aria-pressed={speed === k}
-                            className={`rounded-full px-3 py-1 font-semibold ring-1 ${speed === k ? 'bg-sky-500 text-white ring-sky-500' : 'bg-white text-sky-700 ring-sky-200'}`}>
-                      {v.label}
-                    </button>
-                  ))}
+            <>
+              <BigButton onClick={light} disabled={n < 2}>จุดชนวน!</BigButton>
+              <p className="-mt-1 text-center text-xs text-[#4f6a82]">ไม่มีใครรู้ว่าระเบิดจะตูมตอนไหน · ฟังเสียงติ๊กให้ดี ยิ่งถี่ยิ่งใกล้!</p>
+              <Panel title="ตั้งค่าระเบิด">
+                <div className="flex flex-col gap-3">
+                  <Choice label="วิธีส่งระเบิด" value={mode} onChange={setMode}
+                          options={Object.entries(MODES).map(([k, m]) => ({ k, label: m.label, desc: m.desc }))} />
+                  {mode === 'steady' && (
+                    <Choice label="ความเร็ว" value={speed} onChange={setSpeed}
+                            options={Object.entries(STEADY).map(([k, v]) => ({ k, label: v.label }))} />
+                  )}
+                  <Choice label="ความยาวชนวน" value={fuse} onChange={setFuse}
+                          options={Object.entries(FUSES).map(([k, f]) => ({ k, label: f.label, desc: `${f.range[0]}–${f.range[1]} วิ` }))} />
                 </div>
-              )}
-              <div className="text-sm font-semibold text-rose-700">ความยาวชนวน</div>
-              <div className="-mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="ความยาวชนวน">
-                {Object.entries(FUSES).map(([k, f]) => (
-                  <button key={k} type="button" onClick={() => setFuse(k)} aria-pressed={fuse === k}
-                          className={`rounded-xl px-2 py-2 font-semibold ring-1 transition ${fuse === k ? 'bg-rose-500 text-white ring-rose-500' : 'bg-white text-rose-600 ring-rose-200 hover:bg-rose-50'}`}>
-                    {f.label}
-                    <div className="text-[11px] font-normal opacity-80">{f.range[0]}–{f.range[1]} วิ</div>
-                  </button>
-                ))}
-              </div>
-              <button onClick={light} disabled={n < 2}
-                      className="rounded-2xl bg-amber-400 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-lg shadow-amber-500/30 hover:bg-amber-300 active:scale-95 disabled:opacity-40">
-                จุดชนวน!
-              </button>
-              <p className="text-center text-xs text-rose-900/60">ไม่มีใครรู้ว่าระเบิดจะตูมตอนไหน · ฟังเสียงติ๊กให้ดี ยิ่งถี่ยิ่งใกล้!</p>
-            </div>
+              </Panel>
+            </>
           )}
           {phase === 'live' && auto && (
-            <div className="rounded-2xl bg-white/80 px-4 py-4 text-center shadow ring-1 ring-sky-200">
-              <div className="text-xl font-extrabold text-sky-700">ระเบิดกำลังวนเอง{mode === 'random' ? ' (สุ่มช้าเร็ว)' : ` (${STEADY[speed].label})`}</div>
-              <div className="text-sm text-slate-500">ลุ้นอย่าให้มันหยุดที่คุณ!</div>
-            </div>
+            <Panel title="ระเบิดกำลังวนเอง">
+              <div className="py-2 text-center">
+                <div className="text-lg font-extrabold text-[#24405a]">{mode === 'random' ? 'สุ่มช้าเร็ว' : `ความเร็ว${STEADY[speed].label}`}</div>
+                <div className="text-sm text-[#4f6a82]">ลุ้นอย่าให้มันหยุดที่คุณ!</div>
+              </div>
+            </Panel>
           )}
           {phase === 'live' && !auto && (
-            <div className="flex flex-col gap-2">
-              <button onClick={passNext}
-                      className="rounded-2xl bg-rose-500 px-6 py-5 text-2xl font-extrabold text-white shadow-lg shadow-rose-500/30 hover:bg-rose-600 active:scale-95">
-                ส่งต่อให้ {nextP?.name} ➜
-              </button>
-              <p className="text-center text-xs text-rose-900/60">หรือแตะรูปเพื่อนเพื่อโยนให้ใครก็ได้ · คีย์บอร์ดกด Space</p>
-            </div>
+            <>
+              <BigButton onClick={passNext}>ส่งต่อให้ {nextP?.name} ➜</BigButton>
+              <p className="-mt-1 text-center text-xs text-[#4f6a82]">หรือแตะรูปเพื่อนเพื่อโยนให้ใครก็ได้ · คีย์บอร์ดกด Space</p>
+            </>
           )}
-        </div>
+        </aside>
       </div>
 
       {/* ตูม! */}
       {phase === 'boom' && loser && (
-        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-rose-950/40 p-4">
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#24405a]/40 p-4">
           <div className="boom-flash pointer-events-none fixed inset-0" />
           <div className="pop relative w-full max-w-sm rounded-3xl bg-white p-6 text-center shadow-2xl ring-4 ring-orange-300">
             <div className="text-6xl font-extrabold text-orange-500 drop-shadow-[0_3px_0_#7c2d12]">ตูม!!</div>
@@ -300,20 +274,20 @@ export default function Bomb({ players, onBack, onNet, registerPass }) {
             </div>
             <h3 className="mt-2 text-3xl font-extrabold text-slate-800">{loser.name} โดน!</h3>
             <p className="text-sm text-slate-500">{animalById(loser.animal).name} · โดนสะสม {losses[loser.name] ?? 1} ครั้ง · ส่งต่อกัน {passes} ครั้ง</p>
-            <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-amber-900 ring-1 ring-amber-200">
+            <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-[#24405a] ring-1 ring-amber-200">
               บทลงโทษ: <b>{penalty}</b>
               <button onClick={() => setPenalty(pick(PENALTIES))} className="ml-2 text-xs text-amber-700 underline">สุ่มใหม่</button>
             </div>
             <div className="mt-4 flex flex-col gap-2">
               {n - 1 >= 1 && (
-                <button onClick={eliminate} className="rounded-xl bg-amber-400 px-4 py-3 text-lg font-extrabold text-amber-950 hover:bg-amber-300">
+                <button onClick={eliminate} className="t-btn t-yellow px-4 py-3 text-lg font-extrabold">
                   {n - 1 >= 2 ? `คัด ${loser.name} ออก แล้วเล่นต่อ (เหลือ ${n - 1} คน)` : `คัด ${loser.name} ออก → ประกาศผู้รอด`}
                 </button>
               )}
-              <button onClick={() => setPhase('ready')} className="rounded-xl bg-rose-500 px-4 py-3 text-lg font-bold text-white hover:bg-rose-600">
+              <button onClick={() => setPhase('ready')} className="t-btn t-pink px-4 py-3 text-lg font-bold">
                 เล่นอีกรอบ (ไม่คัดออก)
               </button>
-              <button onClick={onBack} className="rounded-xl px-4 py-2 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">แก้ไขผู้เล่น</button>
+              <button onClick={onBack} className="t-btn t-ghost px-4 py-2">แก้ไขผู้เล่น</button>
             </div>
           </div>
         </div>
@@ -321,23 +295,23 @@ export default function Bomb({ players, onBack, onNet, registerPass }) {
 
       {/* ผู้รอดคนสุดท้าย */}
       {phase === 'winner' && active[0] && (
-        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-rose-950/30 p-4">
-          <div className="pop w-full max-w-sm rounded-3xl bg-gradient-to-b from-amber-200 to-amber-50 p-6 text-center shadow-2xl ring-4 ring-amber-300">
-            <div className="text-lg font-semibold text-amber-800">ผู้รอดคนสุดท้าย</div>
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#24405a]/30 p-4">
+          <div className="t-modal pop w-full max-w-sm p-6 text-center">
+            <div className="text-lg font-semibold text-[#1f8f80]">ผู้รอดคนสุดท้าย</div>
             <div className="float mx-auto w-44"><Animal animal={active[0].animal} number={active[0].num} running /></div>
-            <h3 className="text-4xl font-extrabold text-amber-950">{active[0].name}</h3>
+            <h3 className="text-4xl font-extrabold text-[#24405a]">{active[0].name}</h3>
             <ol className="mt-4 space-y-1 text-left text-sm">
               {out.map((p, i) => (
                 <li key={p.id} className="flex items-center gap-2 rounded-lg bg-white/70 px-2 py-1">
-                  <span className="w-14 shrink-0 text-rose-500">ตูมที่ {i + 1}</span>
+                  <span className="w-14 shrink-0 text-[#e0466e]">ตูมที่ {i + 1}</span>
                   <span className="w-8 shrink-0"><Animal animal={p.animal} /></span>
                   <span className="truncate font-semibold">{p.name}</span>
                 </li>
               ))}
             </ol>
             <div className="mt-4 flex flex-col gap-2">
-              <button onClick={restartAll} className="rounded-xl bg-amber-400 px-4 py-3 text-lg font-extrabold text-amber-950 hover:bg-amber-300">เล่นใหม่ทุกคน</button>
-              <button onClick={onBack} className="rounded-xl px-4 py-2 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">แก้ไขผู้เล่น</button>
+              <button onClick={restartAll} className="t-btn t-yellow px-4 py-3 text-lg font-extrabold">เล่นใหม่ทุกคน</button>
+              <button onClick={onBack} className="t-btn t-ghost px-4 py-2">แก้ไขผู้เล่น</button>
             </div>
           </div>
         </div>

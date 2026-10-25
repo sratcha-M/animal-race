@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell, BigButton } from './MiniShell'
+import { Shell, BigButton, Panel } from './MiniShell'
 import { shuffle } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
 import { load, save } from '../lib/storage'
@@ -78,19 +78,47 @@ export default function Ladder({ players, onBack, onNet, registerHandler }) {
     },
     { 'ladder-go': (from) => { const i = roster.findIndex((p) => p.id === from); if (i >= 0) reveal(i) } })
 
+  const side = (
+    <>
+      <BigButton onClick={revealAll} disabled={allShown}>เปิดทุกเส้น</BigButton>
+      <div className="flex gap-2">
+        <button onClick={reroll} className="t-btn t-ghost flex-1 px-3 py-2 text-sm">สุ่มเส้นขวางใหม่</button>
+        <label className="t-btn t-ghost flex flex-1 cursor-pointer items-center justify-center gap-2 px-3 py-2 text-sm">
+          <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} className="size-4 accent-[#ff6f91]" /> ซ่อนเส้นขวาง
+        </label>
+      </div>
+      <p className="-mt-1 text-center text-xs text-[#4f6a82]">แตะชื่อเพื่อให้เส้นไหลลงไปหาปลายทาง · แก้ชื่อช่องข้างล่างได้ตามต้องการ</p>
+      {shown.length > 0 && (
+        <Panel title="ผลบันไดงู" extra={`${done.length}/${n}`}>
+          <ul className="space-y-1.5">
+            {shown.map((i) => (
+              <li key={i} className="flex items-center gap-2 rounded-xl border-2 border-[#24405a]/15 px-3 py-1.5 text-sm">
+                <span className="size-3.5 shrink-0 rounded-full border-2 border-[#24405a]" style={{ background: COLORS[i % COLORS.length] }} />
+                <span className="font-bold">{roster[i].name}</span>
+                <span className="text-[#4f6a82]">→</span>
+                {done.includes(i)
+                  ? <span className="pop min-w-0 flex-1 truncate font-extrabold text-[#e0466e]">{slots[paths[i].end]}</span>
+                  : <span className="min-w-0 flex-1 animate-pulse text-[#4f6a82]">กำลังไหลลงไป...</span>}
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+    </>
+  )
+
   return (
-    <Shell title="บันไดงู" right={`${n} คน`} onBack={onBack}>
-      <p className="mb-2 text-center text-xs text-rose-900/60">แตะชื่อเพื่อให้เส้นไหลลงไปหาปลายทาง · แก้ชื่อช่องข้างล่างได้ตามต้องการ</p>
-      <div className="overflow-x-auto rounded-2xl bg-white p-3 shadow ring-1 ring-rose-100">
+    <Shell title="บันไดงู" right={`${n} คน`} onBack={onBack} side={side}>
+      <div className="t-card overflow-x-auto p-3">
         <div style={{ minWidth: n * colW }}>
           <div className="grid" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
             {roster.map((p, i) => (
               <button key={p.id} onClick={() => reveal(i)} aria-label={`ปล่อยเส้นของ ${p.name}`}
-                      className="mx-0.5 truncate rounded-lg px-1 py-1.5 text-xs font-extrabold text-white shadow active:scale-95 sm:text-sm"
+                      className="mx-0.5 truncate rounded-lg border-2 border-[#24405a] px-1 py-1.5 text-xs font-extrabold text-white [text-shadow:0_1px_0_#24405a] shadow-[0_3px_0_#24405a] active:translate-y-0.5 active:shadow-none sm:text-sm"
                       style={{ background: COLORS[i % COLORS.length], opacity: shown.includes(i) ? 0.55 : 1 }}>{p.name}</button>
             ))}
           </div>
-          <svg viewBox={`0 0 ${n * 100} ${H}`} preserveAspectRatio="none" className="block w-full" style={{ height: H }} aria-hidden="true">
+          <svg viewBox={`0 0 ${n * 100} ${H}`} preserveAspectRatio="none" className="block h-[clamp(16rem,calc(100dvh-19rem),40rem)] w-full" aria-hidden="true">
             {roster.map((_, c) => <line key={c} x1={x(c)} x2={x(c)} y1="0" y2={H} stroke="#cbd5e1" strokeWidth="5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />)}
             {rungs.flatMap((set, lvl) => set.map((k) => {
               const y = ((lvl + 1) / (LEVELS + 1)) * H
@@ -107,7 +135,7 @@ export default function Ladder({ players, onBack, onNet, registerHandler }) {
               const who = done.find((d) => paths[d]?.end === i)
               return (
                 <input key={i} value={s} maxLength={10} onChange={(e) => setSlot(i, e.target.value)} aria-label={`ปลายทางช่อง ${i + 1}`}
-                       className={`mx-0.5 min-w-0 rounded-lg border-2 px-1 py-1.5 text-center text-xs font-bold text-slate-700 outline-none focus:border-rose-300 sm:text-sm ${who != null ? 'pop bg-white' : 'border-slate-200 bg-slate-50'}`}
+                       className={`mx-0.5 min-w-0 rounded-lg border-2 px-1 py-1.5 text-center text-xs font-bold text-[#24405a] outline-none focus:border-[#3ec1b0] sm:text-sm ${who != null ? 'pop bg-white' : 'border-[#24405a]/20 bg-[#f2fbf9]'}`}
                        style={who != null ? { borderColor: COLORS[who % COLORS.length] } : undefined} />
               )
             })}
@@ -124,30 +152,6 @@ export default function Ladder({ players, onBack, onNet, registerHandler }) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        <BigButton onClick={revealAll} disabled={allShown}>เปิดทุกเส้น</BigButton>
-        <div className="flex gap-2">
-          <button onClick={reroll} className="flex-1 rounded-xl px-4 py-2 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">สุ่มเส้นขวางใหม่</button>
-          <label className="flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm text-rose-600 ring-1 ring-rose-200">
-            <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> ซ่อนเส้นขวาง
-          </label>
-        </div>
-      </div>
-
-      {shown.length > 0 && (
-        <ul className="mt-4 space-y-1">
-          {shown.map((i) => (
-            <li key={i} className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-1.5 text-sm ring-1 ring-rose-100">
-              <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-              <span className="font-bold">{roster[i].name}</span>
-              <span className="text-slate-400">→</span>
-              {done.includes(i)
-                ? <span className="pop min-w-0 flex-1 truncate font-extrabold text-rose-600">{slots[paths[i].end]}</span>
-                : <span className="min-w-0 flex-1 animate-pulse text-slate-400">กำลังไหลลงไป...</span>}
-            </li>
-          ))}
-        </ul>
-      )}
     </Shell>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell, BigButton } from './MiniShell'
+import { Shell, BigButton, Choice } from './MiniShell'
 import Animal from './Animal'
 import { shuffle, pick, sleep } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
@@ -115,7 +115,7 @@ function Stage({ s }) {
     <div className="relative flex flex-col items-center">
       {s.phase === 'open' && <div className="absolute bottom-8 z-10"><ResultCard e={s.e} /></div>}
       <div className={s.phase === 'egg' ? 'egg-out' : ''}><Capsule shell={s.e.shell} open={s.phase === 'open'} /></div>
-      {s.phase === 'egg' && <div className="mt-1 text-sm font-bold text-rose-500">{s.e.player.name} หมุนได้ไข่!</div>}
+      {s.phase === 'egg' && <div className="mt-1 text-sm font-bold text-[#e0466e]">{s.e.player.name} หมุนได้ไข่!</div>}
     </div>
   )
 }
@@ -280,7 +280,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
   // ---------- ส่วนประกอบหน้าจอ ----------
   const cta = (label, onClick, disabled) => (
     <button onClick={onClick} disabled={disabled}
-            className="w-full rounded-2xl bg-amber-300 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-[0_6px_0_#d99a06] transition active:translate-y-1 active:shadow-[0_2px_0_#d99a06] disabled:opacity-50">
+            className="t-btn t-pink booth-title w-full px-6 py-3 text-3xl">
       {label}
     </button>
   )
@@ -288,20 +288,14 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
 
   return (
     <Shell wide title="กาชาปอง" right={mode === 'solo' ? `เหลือ ${left} ไข่` : `${total} คน`} onBack={onBack}>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start lg:gap-8">
         {/* ===== ซ้าย: ตู้กาชาปอง ===== */}
         <div className="flex flex-col gap-3">
-          <div role="radiogroup" aria-label="วิธีเล่น" className="grid grid-cols-3 gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
-            {Object.entries(MODES).map(([k, v]) => (
-              <button key={k} onClick={() => resetAll(k)} aria-pressed={mode === k} disabled={k === 'phones' && !room}
-                      className={`rounded-xl px-1 py-1.5 text-sm font-bold transition disabled:opacity-40 ${mode === k ? 'bg-rose-500 text-white shadow' : 'text-rose-600 hover:bg-rose-50'}`}>
-                {v.label}<div className="text-[10px] font-normal leading-tight opacity-80">{v.desc}</div>
-              </button>
-            ))}
-          </div>
-          {!room && <p className="-mt-1 text-center text-xs text-rose-900/60">โหมด "หมุนบนมือถือ" ต้องเปิดห้องออนไลน์ก่อน (ปุ่มชวนเพื่อนที่หน้าตั้งค่าผู้เล่น)</p>}
+          <Choice label="วิธีเล่น" value={mode} onChange={resetAll}
+                  options={Object.entries(MODES).map(([k, v]) => ({ k, label: v.label, desc: v.desc, disabled: k === 'phones' && !room }))} />
+          {!room && <p className="-mt-1 text-center text-xs text-[#4f6a82]">โหมด "หมุนบนมือถือ" ต้องเปิดห้องออนไลน์ก่อน (ปุ่มชวนเพื่อนที่หน้าตั้งค่าผู้เล่น)</p>}
 
-          <section className="relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-b from-fuchsia-500 via-rose-400 to-orange-300 p-4 shadow-xl ring-4 ring-white/70" aria-label="ตู้กาชาปอง">
+          <section className="relative isolate overflow-hidden rounded-[2rem] border-4 border-[#24405a] bg-gradient-to-b from-fuchsia-500 via-rose-400 to-orange-300 p-4 shadow-[0_8px_0_#24405a]" aria-label="ตู้กาชาปอง">
             <div className="pointer-events-none absolute -left-10 -top-10 -z-10 h-44 w-44 rounded-full bg-yellow-200/40 blur-2xl" />
             <div className="pointer-events-none absolute -bottom-12 -right-10 -z-10 h-52 w-52 rounded-full bg-pink-200/40 blur-2xl" />
             {/* ในตู้มีอะไรบ้าง */}
@@ -378,7 +372,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
                         <span className="min-w-0 flex-1 truncate font-bold">{p.name}</span>
                         {did ? <span className="text-xs font-bold text-emerald-600">หมุนแล้ว</span>
                           : p.remote ? <span className="text-xs text-slate-400">รอหมุน</span>
-                            : <button onClick={() => spinFor(p.id)} className="rounded-lg bg-amber-300 px-2 py-0.5 text-xs font-extrabold text-amber-950">หมุนให้</button>}
+                            : <button onClick={() => spinFor(p.id)} className="t-btn t-yellow px-2 py-0.5 text-xs font-extrabold">หมุนให้</button>}
                       </li>
                     )
                   })}
@@ -391,12 +385,12 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
 
         {/* ===== ขวา: ผลรางวัล + ตั้งค่า ===== */}
         <div className="flex flex-col gap-3">
-          <section className="rounded-3xl bg-white p-3 shadow-sm ring-1 ring-rose-100" aria-label="ผลรางวัล">
+          <section className="t-card p-3" aria-label="ผลรางวัล">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-lg font-extrabold text-rose-600">ผลรางวัล <span className="text-sm font-semibold text-slate-400">{opened.length}/{total}</span></h3>
+              <h3 className="text-lg font-extrabold text-[#e0466e]">ผลรางวัล <span className="text-sm font-semibold text-slate-400">{opened.length}/{total}</span></h3>
               {opened.length > 1 && (
                 <label className="flex items-center gap-1.5 text-xs text-slate-600">เรียงตาม
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-sm">
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-[#cfe9e4] bg-white px-2 py-1 text-sm">
                     <option value="order">ลำดับที่เปิด</option>
                     <option value="name">ชื่อคน</option>
                     <option value="prize">ชื่อรางวัล</option>
@@ -413,7 +407,7 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
               </div>
             )}
             {opened.length === 0 ? (
-              <div className="grid place-items-center rounded-2xl border-2 border-dashed border-rose-200 px-4 py-8 text-center text-sm text-rose-900/50">
+              <div className="grid place-items-center rounded-2xl border-2 border-dashed border-[#cfe9e4] px-4 py-8 text-center text-sm text-[#4f6a82]">
                 ผลจะขึ้นที่นี่ทันทีที่เปิดไข่<br />แต่ละคนได้รางวัลอะไร ระดับไหน
               </div>
             ) : (
@@ -446,21 +440,21 @@ export default function Gacha({ players, onBack, room, onNet, registerHandler })
           </section>
 
           {/* ตั้งค่า: เก็บไว้ในกล่องพับ เพื่อไม่ให้หน้ายาว */}
-          <details className="group rounded-3xl bg-white p-3 shadow-sm ring-1 ring-rose-100">
+          <details className="t-card group p-3">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
               <span>
-                <span className="block text-lg font-extrabold text-rose-600">ตั้งค่ารางวัลและกติกา</span>
+                <span className="block text-lg font-extrabold text-[#e0466e]">ตั้งค่ารางวัลและกติกา</span>
                 <span className="block text-xs text-slate-500">{tiersOn.map((k) => `${TIERS[k].label} ${prizes[k].length}`).join(' · ')} · {repeat ? 'ซ้ำได้' : 'ไม่ซ้ำ'}</span>
               </span>
-              <span className="text-rose-400 transition group-open:rotate-180" aria-hidden="true">▼</span>
+              <span className="text-[#e0466e] transition group-open:rotate-180" aria-hidden="true">▼</span>
             </summary>
 
-            <div className="mt-3 border-t border-rose-100 pt-3">
+            <div className="mt-3 border-t border-[#cfe9e4] pt-3">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs text-emerald-600">บันทึกอัตโนมัติในเครื่องนี้ ✓</span>
                 <button onClick={() => setPrizes(DEFAULT_PRIZES)} className="text-xs text-slate-500 underline">คืนค่าเริ่มต้น</button>
               </div>
-              <label className="mb-3 flex items-start gap-2 rounded-xl bg-rose-50 p-2.5 text-sm font-semibold text-slate-700">
+              <label className="mb-3 flex items-start gap-2 rounded-xl bg-[#ffe1e9] p-2.5 text-sm font-semibold text-slate-700">
                 <input type="checkbox" className="mt-1" checked={repeat} onChange={(e) => resetAll(mode, tiersOn, e.target.checked)} />
                 <span>ให้รางวัลซ้ำกันได้ <span className="block text-xs font-normal text-slate-500">ปิด = รางวัลแต่ละอย่างแจกได้แค่ 1 คน ถ้ารางวัลน้อยกว่าคน คนที่เหลือได้ไข่เปล่า (เปลี่ยนแล้วเริ่มรอบใหม่)</span></span>
               </label>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell, BigButton, ResultModal } from './MiniShell'
+import { Shell, BigButton, ResultModal, Panel, Choice } from './MiniShell'
 import Animal from './Animal'
 import { randInt, shuffle, sleep } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
@@ -99,19 +99,22 @@ export default function Cards({ players, onBack, onNet, registerHandler }) {
     },
     { 'cards-flip': (from, d) => { const c = deck.find((x) => x.id === d?.id); if (c) flip(c) } })
 
-  return (
-    <Shell title="ไพ่คว่ำ" right={`${n} คน`} onBack={() => { run.current = -1; onBack() }}>
-      <div role="radiogroup" aria-label="โหมดไพ่" className="mb-3 grid grid-cols-2 gap-2">
-        {Object.entries(MODES).map(([k, v]) => (
-          <button key={k} onClick={() => { setMode(k); again() }} aria-pressed={mode === k} disabled={phase === 'show' || phase === 'shuffle'}
-                  className={`rounded-xl px-2 py-2 font-semibold ring-1 transition ${mode === k ? 'bg-rose-500 text-white ring-rose-500' : 'bg-white text-rose-600 ring-rose-200'}`}>
-            {v.label}<div className="text-[11px] font-normal opacity-80">{v.desc}</div>
-          </button>
-        ))}
-      </div>
+  const side = (
+    <>
+      {msg && <p className="text-center text-lg font-extrabold text-[#e0466e]">{msg}</p>}
+      {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
+        : (phase === 'ready' || phase === 'done') && <BigButton onClick={start}>{phase === 'done' ? 'เล่นอีกรอบ' : 'เริ่ม (หงายไพ่ให้ดู)'}</BigButton>}
+      <Panel title="โหมดไพ่">
+        <Choice value={mode} disabled={phase === 'show' || phase === 'shuffle'} onChange={(k) => { setMode(k); again() }}
+                options={Object.entries(MODES).map(([k, v]) => ({ k, label: v.label, desc: v.desc }))} />
+      </Panel>
+    </>
+  )
 
-      <div className="relative mx-auto w-full rounded-3xl bg-emerald-600/90 p-2 shadow-xl ring-4 ring-emerald-800/30" style={{ perspective: 900 }}>
-        <div className="relative w-full" style={{ aspectRatio: `${cols * 3} / ${rows * 4}`, minHeight: 160 }}>
+  return (
+    <Shell title="ไพ่คว่ำ" right={`${n} คน`} onBack={() => { run.current = -1; onBack() }} side={side}>
+      <div className="relative mx-auto w-full rounded-3xl border-4 border-[#24405a] bg-emerald-600 p-2 shadow-[0_8px_0_#24405a]" style={{ perspective: 900, width: `min(100%, calc((100dvh - 9rem) * ${(cols * 3) / (rows * 4)}))`, minWidth: "15rem" }}>
+        <div className="relative w-full" style={{ aspectRatio: `${cols * 3} / ${rows * 4}`, minHeight: "16rem" }}>
           {deck.length === 0 && (
             <div className="absolute inset-0 grid place-items-center text-center text-sm font-semibold text-white/90">กดเริ่ม ไพ่ทุกใบจะหงายให้ดูก่อน<br />แล้วคว่ำและสลับตำแหน่ง</div>
           )}
@@ -123,13 +126,13 @@ export default function Cards({ players, onBack, onNet, registerHandler }) {
                       className="absolute p-[1.5%]"
                       style={{ left: `${(s % cols) * (100 / cols)}%`, top: `${Math.floor(s / cols) * (100 / rows)}%`, width: `${100 / cols}%`, height: `${100 / rows}%`, transition: 'left .32s ease-in-out, top .32s ease-in-out' }}>
                 <div className="relative h-full w-full" style={{ transformStyle: 'preserve-3d', transition: 'transform .45s', transform: faceUp ? 'rotateY(180deg)' : 'none' }}>
-                  <div className="absolute inset-0 grid place-items-center rounded-xl bg-rose-400 ring-2 ring-white" style={{ backfaceVisibility: 'hidden' }}>
+                  <div className="absolute inset-0 grid place-items-center rounded-xl bg-[#ff6f91] ring-2 ring-white" style={{ backfaceVisibility: 'hidden' }}>
                     <div className="grid h-[70%] w-[70%] place-items-center rounded-lg border-2 border-dashed border-white/70 text-2xl font-extrabold text-white/80">?</div>
                   </div>
-                  <div className={`absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-xl bg-white px-0.5 ring-2 ${matched.includes(c.id) ? 'ring-amber-400' : 'ring-rose-200'}`}
+                  <div className={`absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-xl bg-white px-0.5 ring-2 ${matched.includes(c.id) ? 'ring-amber-400' : 'ring-[#24405a]/20'}`}
                        style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                     <div className="w-[80%]"><Animal animal={c.p.animal} /></div>
-                    <div className="max-w-full truncate px-1 text-[11px] font-extrabold text-rose-700 sm:text-sm">{c.p.name}</div>
+                    <div className="max-w-full truncate px-1 text-[11px] font-extrabold text-[#24405a] sm:text-sm">{c.p.name}</div>
                   </div>
                 </div>
               </button>
@@ -138,21 +141,15 @@ export default function Cards({ players, onBack, onNet, registerHandler }) {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        {msg && <p className="text-center text-lg font-extrabold text-rose-500">{msg}</p>}
-        {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
-          : (phase === 'ready' || phase === 'done') && <BigButton onClick={start}>{phase === 'done' ? 'เล่นอีกรอบ' : 'เริ่ม (หงายไพ่ให้ดู)'}</BigButton>}
-      </div>
-
       {modal && mode === 'pick' && winner && <ResultModal label="ไพ่ที่เปิดคือ" winner={winner} n={n} againLabel="สลับไพ่อีกรอบ" onAgain={again} onEliminate={eliminate} onBack={onBack} />}
       {modal && mode === 'match' && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-rose-950/30 p-4">
-          <div className="pop w-full max-w-sm rounded-3xl bg-gradient-to-b from-amber-200 to-amber-50 p-6 text-center shadow-2xl ring-4 ring-amber-300">
-            <div className="text-4xl font-extrabold text-amber-950">จับคู่ครบแล้ว!</div>
-            <p className="mt-2 text-lg text-amber-900">ใช้ไป {attempts} ครั้ง {attempts <= n + 1 ? '· ความจำเทพมาก' : attempts <= n * 2 ? '· ทำได้ดี' : '· ลองใหม่ได้เสมอ'}</p>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#24405a]/30 p-4">
+          <div className="t-modal pop w-full max-w-sm p-6 text-center">
+            <div className="text-4xl font-extrabold text-[#24405a]">จับคู่ครบแล้ว!</div>
+            <p className="mt-2 text-lg text-[#24405a]">ใช้ไป {attempts} ครั้ง {attempts <= n + 1 ? '· ความจำเทพมาก' : attempts <= n * 2 ? '· ทำได้ดี' : '· ลองใหม่ได้เสมอ'}</p>
             <div className="mt-4 flex flex-col gap-2">
-              <button onClick={again} className="rounded-xl bg-amber-400 px-4 py-3 text-lg font-extrabold text-amber-950 hover:bg-amber-300">เล่นอีกรอบ</button>
-              <button onClick={onBack} className="rounded-xl px-4 py-2 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">แก้ไขผู้เล่น</button>
+              <button onClick={again} className="t-btn t-yellow px-4 py-3 text-lg font-extrabold">เล่นอีกรอบ</button>
+              <button onClick={onBack} className="t-btn t-ghost px-4 py-2">แก้ไขผู้เล่น</button>
             </div>
           </div>
         </div>

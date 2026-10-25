@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Animal from './Animal'
+import { Shell, BigButton, Panel } from './MiniShell'
 import { animalById } from '../game/constants'
 import { beep, fanfare } from '../lib/sound'
 import { useMiniNet } from '../lib/useMiniNet'
@@ -122,16 +123,30 @@ export default function Claw({ players, onBack, onNet, registerHandler }) {
     { phase, msg, drops, winnerId: winner?.id ?? null, n: remaining.length },
     { 'claw-go': () => { if (phase === 'ready' && remaining.length >= 2) start() } })
 
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 py-4">
-      <div className="mb-2 flex items-center justify-between">
-        <button onClick={() => { run.current = -1; onBack() }} className="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-white/70">← กลับ</button>
-        <h2 className="text-xl font-extrabold text-rose-500">ตู้คีบตุ๊กตา</h2>
-        <span className="w-16 text-right text-xs text-rose-900/60">{n} ตัว</span>
-      </div>
+  const side = (
+    <>
+      {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
+        : <BigButton onClick={start} disabled={phase === 'play'}>{phase === 'play' ? 'กำลังคีบ...' : 'คีบเลย!'}</BigButton>}
+      {drops > 0 && phase === 'play' && <p className="text-center text-sm font-bold text-[#e0466e]">หลุดไปแล้ว {drops} ครั้ง</p>}
+      <p className="-mt-1 text-center text-xs text-[#4f6a82]">ก้ามปูสุ่มคีบตุ๊กตา 1 ตัว บางทีคีบติดแล้วหลุดกลางทาง · ชื่อบนตุ๊กตาคือคนที่ถูกเลือก</p>
+      {picked.length > 0 && (
+        <Panel title="ถูกคีบแล้ว" extra={picked.length}>
+          <ol className="flex flex-wrap gap-1.5">
+            {picked.map((p, k) => (
+              <li key={k} className="pop flex items-center gap-1 rounded-full border-2 border-[#24405a] bg-white py-0.5 pl-1 pr-3 text-sm font-bold">
+                <span className="w-7"><Animal animal={p.animal} /></span><span className="text-[#e0466e]">{k + 1}</span>{p.name}
+              </li>
+            ))}
+          </ol>
+        </Panel>
+      )}
+    </>
+  )
 
+  return (
+    <Shell title="ตู้คีบตุ๊กตา" right={`${n} ตัว`} onBack={() => { run.current = -1; onBack() }} side={side}>
       {/* ตู้ */}
-      <div className="relative aspect-[4/5] w-full select-none overflow-hidden rounded-3xl border-[10px] border-pink-400 bg-gradient-to-b from-sky-100 via-sky-50 to-amber-100 shadow-xl">
+      <div className="relative mx-auto aspect-[4/5] w-[min(100%,calc((100dvh-8rem)*0.8),36rem)] min-w-[15rem] select-none overflow-hidden rounded-3xl border-[8px] border-pink-400 bg-gradient-to-b from-sky-100 via-sky-50 to-amber-100 shadow-[0_0_0_4px_#24405a,0_10px_0_4px_#24405a]">
         <div className="absolute inset-x-0 top-0 h-[4%] bg-pink-300/80" />
         {/* ช่องรับ */}
         <div className="absolute bottom-0 left-0 z-[3] flex h-[22%] w-[20%] items-end justify-center rounded-tr-2xl bg-slate-700/90 pb-1 text-[10px] font-bold text-white">ช่องรับ</div>
@@ -156,7 +171,7 @@ export default function Claw({ players, onBack, onNet, registerHandler }) {
                    opacity: isGone ? 0 : 1,
                  }}>
               <Animal animal={p.animal} />
-              <div className="absolute inset-x-[6%] -bottom-[6%] truncate rounded-md bg-white/95 px-1 py-px text-center text-[10px] font-extrabold leading-tight text-rose-700 shadow ring-1 ring-rose-300 sm:text-xs">
+              <div className="absolute inset-x-[6%] -bottom-[6%] truncate rounded-md bg-white/95 px-1 py-px text-center text-[10px] font-extrabold leading-tight text-[#24405a] shadow ring-1 ring-[#24405a]/20 sm:text-xs">
                 {p.name}
               </div>
             </div>
@@ -173,47 +188,31 @@ export default function Claw({ players, onBack, onNet, registerHandler }) {
 
         {phase !== 'ready' && msg && (
           <div className="absolute inset-x-0 top-[6%] z-[7] text-center">
-            <span className="rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-rose-600 shadow ring-1 ring-rose-200">{msg}</span>
+            <span className="rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-[#e0466e] shadow ring-1 ring-[#24405a]/20">{msg}</span>
           </div>
         )}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        {n < 2 ? (
-          <button onClick={reset} className="rounded-2xl bg-amber-400 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-lg hover:bg-amber-300 active:scale-95">เริ่มใหม่ทุกคน</button>
-        ) : (
-          <button onClick={start} disabled={phase === 'play'}
-                  className="rounded-2xl bg-amber-400 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-lg shadow-amber-500/30 hover:bg-amber-300 active:scale-95 disabled:opacity-40">
-            {phase === 'play' ? 'กำลังคีบ...' : 'คีบเลย!'}
-          </button>
-        )}
-        <p className="text-center text-xs text-rose-900/60">ก้ามปูสุ่มคีบตุ๊กตา 1 ตัว บางทีคีบติดแล้วหลุดกลางทาง · ชื่อบนตุ๊กตาคือคนที่ถูกเลือก</p>
-        {picked.length > 0 && (
-          <p className="text-center text-sm text-slate-600">ถูกคีบแล้ว: {picked.map((p) => p.name).join(' → ')}</p>
-        )}
-        {drops > 0 && phase === 'play' && <p className="text-center text-sm text-rose-500">หลุดไปแล้ว {drops} ครั้ง</p>}
-      </div>
-
       {phase === 'done' && winner && (
-        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-rose-950/30 p-4">
-          <div className="pop w-full max-w-sm rounded-3xl bg-gradient-to-b from-amber-200 to-amber-50 p-6 text-center shadow-2xl ring-4 ring-amber-300">
-            <div className="text-lg font-semibold text-amber-800">ก้ามปูคีบได้</div>
+        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#24405a]/30 p-4">
+          <div className="t-modal pop w-full max-w-sm p-6 text-center">
+            <div className="text-lg font-semibold text-[#1f8f80]">ก้ามปูคีบได้</div>
             <div className="float mx-auto w-44"><Animal animal={winner.animal} number={winner.num} running /></div>
-            <h3 className="text-4xl font-extrabold text-amber-950">{winner.name}</h3>
-            <p className="text-sm text-amber-900/70">{animalById(winner.animal).name}{drops > 0 ? ` · หลุดมา ${drops} ครั้งกว่าจะได้` : ' · คีบติดตั้งแต่ครั้งแรก!'}</p>
+            <h3 className="text-4xl font-extrabold text-[#24405a]">{winner.name}</h3>
+            <p className="text-sm text-[#4f6a82]">{animalById(winner.animal).name}{drops > 0 ? ` · หลุดมา ${drops} ครั้งกว่าจะได้` : ' · คีบติดตั้งแต่ครั้งแรก!'}</p>
             <div className="mt-4 flex flex-col gap-2">
-              <button onClick={again} className="rounded-xl bg-amber-400 px-4 py-3 text-lg font-extrabold text-amber-950 hover:bg-amber-300">คีบอีกรอบ</button>
+              <button onClick={again} className="t-btn t-yellow px-4 py-3 text-lg font-extrabold">คีบอีกรอบ</button>
               {n > 2 && (
-                <button onClick={eliminate} className="rounded-xl bg-rose-500 px-4 py-3 text-lg font-bold text-white hover:bg-rose-600">
+                <button onClick={eliminate} className="t-btn t-pink px-4 py-3 text-lg font-bold">
                   เอา {winner.name} ออก แล้วคีบต่อ (เหลือ {n - 1})
                 </button>
               )}
-              <button onClick={onBack} className="rounded-xl px-4 py-2 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50">แก้ไขผู้เล่น</button>
+              <button onClick={onBack} className="t-btn t-ghost px-4 py-2">แก้ไขผู้เล่น</button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </Shell>
   )
 }
 

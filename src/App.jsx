@@ -157,7 +157,7 @@ function HostApp() {
   }
 
   return (
-    <main className="min-h-full bg-[radial-gradient(ellipse_at_top,#ffffff_0%,#fff4f8_50%,#ffe3ee_100%)] text-slate-900">
+    <main className="booth booth-bg min-h-full">
       {screen === 'setup' && (
         <Setup
           players={players} setPlayers={setPlayers} onRemove={removePlayer}
@@ -209,10 +209,10 @@ function GameTabs({ tab, setTab }) {
     ...MINI.map(({ id, label }) => ({ id, label })),
   ]
   return (
-    <div role="tablist" aria-label="เลือกเกม" className="mx-auto mb-4 flex w-full max-w-md flex-wrap justify-center gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
+    <div role="tablist" aria-label="เลือกเกม" className="mx-auto mb-5 flex w-full max-w-3xl flex-wrap justify-center gap-1.5">
       {tabs.map((t) => (
         <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-                className={`rounded-xl px-3 py-1.5 text-sm font-bold sm:text-base transition ${tab === t.id ? 'bg-rose-500 text-white shadow' : 'text-rose-600 hover:bg-rose-50'}`}>
+                className={`rounded-xl border-[3px] border-[#24405a] px-3 py-1 text-sm transition sm:text-base ${tab === t.id ? 'bg-[#ff6f91] font-bold text-white shadow-[0_4px_0_#24405a]' : 'bg-white text-[#24405a] hover:-translate-y-0.5 hover:bg-[#f2fbf9]'}`}>
           {t.label}
         </button>
       ))}

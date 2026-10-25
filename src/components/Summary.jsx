@@ -1,25 +1,26 @@
 import Animal from './Animal'
 import { animalById } from '../game/constants'
 
-const MEDAL = ['bg-amber-400 text-amber-950', 'bg-slate-300 text-slate-800', 'bg-orange-300 text-orange-950']
+const MEDAL = ['bg-amber-400 text-[#24405a]', 'bg-slate-300 text-slate-800', 'bg-orange-300 text-orange-950']
 
 // สรุปลำดับทั้งหมดของโหมดคัดออก (ชนะรอบแรก = อันดับ 1, คนสุดท้ายที่เหลือ = อันดับสุดท้าย)
 export default function Summary({ history, onRestartAll, onEdit }) {
   const [first, ...rest] = history
   return (
-    <div className="relative mx-auto w-full max-w-2xl px-4 py-6">
-      <h1 className="mb-4 text-center text-3xl font-extrabold text-rose-500 sm:text-4xl">สรุปลำดับทั้งหมด</h1>
+    <div className="relative mx-auto w-full max-w-xl px-4 py-6 lg:max-w-5xl">
+      <h1 className="mb-4 text-center booth-title text-3xl text-[#24405a] sm:text-4xl">สรุปลำดับทั้งหมด</h1>
 
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
       {first && (
-        <section className="pop rounded-3xl bg-gradient-to-b from-amber-200 to-amber-50 p-5 text-center shadow-lg ring-4 ring-amber-300">
-          <div className="font-semibold text-amber-800">อันดับ 1</div>
+        <section className="t-modal pop p-5 text-center">
+          <div className="font-semibold text-[#1f8f80]">อันดับ 1</div>
           <div className="float mx-auto w-48"><Animal animal={first.player.animal} number={first.player.num} running /></div>
-          <h2 className="text-3xl font-extrabold text-amber-950">{first.player.name}</h2>
-          <p className="text-sm text-amber-900/80">{animalById(first.player.animal).name} · ชนะรอบที่ 1</p>
+          <h2 className="text-3xl font-extrabold text-[#24405a]">{first.player.name}</h2>
+          <p className="text-sm text-[#4f6a82]">{animalById(first.player.animal).name} · ชนะรอบที่ 1</p>
         </section>
       )}
 
-      <ol className="mt-5 divide-y divide-slate-100 rounded-3xl bg-white p-3 shadow-sm ring-1 ring-rose-100">
+      <ol className="t-card mt-5 divide-y-2 divide-dotted divide-[#cfe9e4] p-3 lg:mt-0">
         {rest.map((h, i) => {
           const rank = i + 2
           return (
@@ -36,12 +37,13 @@ export default function Summary({ history, onRestartAll, onEdit }) {
           )
         })}
       </ol>
+      </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <button onClick={onRestartAll} className="flex-1 rounded-2xl bg-amber-400 px-6 py-4 text-xl font-extrabold text-amber-950 shadow-lg hover:bg-amber-300 active:scale-95">
+      <div className="mx-auto mt-6 flex max-w-2xl flex-col gap-3 sm:flex-row">
+        <button onClick={onRestartAll} className="t-btn t-pink booth-title flex-1 px-6 py-3 text-2xl">
           เริ่มใหม่ทุกคน
         </button>
-        <button onClick={onEdit} className="flex-1 rounded-2xl bg-white px-6 py-4 text-xl font-semibold text-rose-600 shadow ring-1 ring-rose-200 hover:bg-rose-50 active:scale-95">
+        <button onClick={onEdit} className="t-btn t-ghost flex-1 px-6 py-4 text-xl font-semibold">
           แก้ไขผู้เล่น
         </button>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell } from './MiniShell'
+import { Shell, BigButton, Panel } from './MiniShell'
 import Animal from './Animal'
 import { randInt, rand } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
@@ -68,14 +68,15 @@ export default function Slot({ players, onBack, onNet, registerHandler }) {
   const bits = useMemo(() => Array.from({ length: 26 }, (_, i) => ({ x: rand(0, 100), d: rand(1.8, 3.2), delay: rand(0, 0.8), c: BITS[i % BITS.length] })), [round])
 
   return (
-    <Shell title="สล็อตแมชชีน" right={`${people.length} คน`} onBack={onBack}>
-      <div className="relative mx-auto mt-5 flex w-full max-w-md items-start gap-1.5">
+    <Shell title="สล็อตแมชชีน" right={`${people.length} คน`} onBack={onBack}
+           side={<SlotSide {...{ pull, spinning, parts, round, bits, result, history, dutyText, setDutyText, condText, setCondText }} />}>
+      <div className="relative mx-auto mt-5 flex w-full max-w-[34rem] items-start gap-1.5">
         {/* ตัวเครื่อง: หูกลม ๆ + หน้าตาน่ารัก */}
         <div className="relative min-w-0 flex-1">
-          <span className="absolute -top-5 left-5 z-0 h-12 w-12 rounded-full border-[5px] border-white bg-[#ff9cc3]"><span className="absolute inset-2 rounded-full bg-[#ffc3da]" /></span>
-          <span className="absolute -top-5 right-5 z-0 h-12 w-12 rounded-full border-[5px] border-white bg-[#ff9cc3]"><span className="absolute inset-2 rounded-full bg-[#ffc3da]" /></span>
+          <span className="absolute -top-5 left-5 z-0 h-12 w-12 rounded-full border-[5px] border-[#24405a] bg-[#ff9cc3]"><span className="absolute inset-2 rounded-full bg-[#ffc3da]" /></span>
+          <span className="absolute -top-5 right-5 z-0 h-12 w-12 rounded-full border-[5px] border-[#24405a] bg-[#ff9cc3]"><span className="absolute inset-2 rounded-full bg-[#ffc3da]" /></span>
 
-          <div className="relative z-[1] overflow-hidden rounded-[2.2rem] border-[6px] border-white bg-gradient-to-b from-[#ffb3d1] via-[#ff97bf] to-[#ff7fb0] p-3 shadow-[0_14px_28px_rgba(255,110,160,.35)]">
+          <div className="relative z-[1] overflow-hidden rounded-[2.2rem] border-[5px] border-[#24405a] bg-gradient-to-b from-[#ffb3d1] via-[#ff97bf] to-[#ff7fb0] p-3 shadow-[0_8px_0_#24405a]">
             {/* ไฟประดับ */}
             <div className="mb-1 flex justify-around" aria-hidden="true">
               {Array.from({ length: 9 }, (_, i) => <span key={i} className="twinkle h-2 w-2 rounded-full bg-yellow-200 shadow-[0_0_6px_#fff3a0]" style={{ animationDelay: `${i * 0.25}s` }} />)}
@@ -105,7 +106,7 @@ export default function Slot({ players, onBack, onNet, registerHandler }) {
                           {items.map((it, i) => (
                             <div key={i} className={`flex items-center justify-center gap-1 px-1 text-center ${i % 2 ? 'bg-[#fff0f6]' : 'bg-white'}`} style={{ height: ROW }}>
                               {it.animal && <span className="w-9 shrink-0"><Animal animal={it.animal} /></span>}
-                              <span className="line-clamp-2 min-w-0 break-words text-xs font-extrabold leading-tight text-rose-600 sm:text-sm">{it.text}</span>
+                              <span className="line-clamp-2 min-w-0 break-words text-xs font-extrabold leading-tight text-[#e0466e] sm:text-sm">{it.text}</span>
                             </div>
                           ))}
                         </div>
@@ -141,50 +142,55 @@ export default function Slot({ players, onBack, onNet, registerHandler }) {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3">
-        <button onClick={pull} disabled={spinning}
-                className="w-full rounded-2xl bg-amber-300 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-[0_6px_0_#d99a06] transition active:translate-y-1 active:shadow-[0_2px_0_#d99a06] disabled:opacity-60">
-          {spinning ? 'กำลังหมุน...' : 'ดึงคันโยก!'}
-        </button>
+    </Shell>
+  )
+}
 
-        {/* ผลลัพธ์: การ์ดฟองพูด */}
-        <div className="relative rounded-3xl bg-white px-4 py-4 text-center shadow ring-4 ring-pink-200" aria-live="polite">
-          <span className="absolute -top-2 left-1/2 h-4 w-4 -translate-x-1/2 rotate-45 bg-white ring-4 ring-pink-200 [clip-path:polygon(0_0,100%_0,0_100%)]" />
+function SlotSide({ pull, spinning, parts, round, bits, result, history, dutyText, setDutyText, condText, setCondText }) {
+  return (
+    <>
+        <BigButton onClick={pull} disabled={spinning}>{spinning ? 'กำลังหมุน...' : 'ดึงคันโยก!'}</BigButton>
+
+        {/* ผลลัพธ์ */}
+        <Panel title="ผลสล็อต">
+        <div className="relative min-h-[6rem] text-center" aria-live="polite">
           {parts && !spinning ? (
             <div key={round} className="pop relative">
               {bits.map((b, i) => <span key={i} className="confetti" style={{ left: `${b.x}%`, background: b.c, animationDuration: `${b.d}s`, animationDelay: `${b.delay}s` }} />)}
               <div className="flex items-center justify-center gap-2">
                 <span className="w-16 shrink-0"><Animal animal={parts.who.animal} /></span>
-                <span className="text-2xl font-extrabold text-rose-600">{parts.who.text}</span>
+                <span className="booth-title text-2xl text-[#24405a]">{parts.who.text}</span>
               </div>
               <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 text-lg font-extrabold">
                 <span className="rounded-full px-3 py-0.5 text-white" style={{ background: CHIP[1] }}>{parts.duty}</span>
                 <span className="text-pink-400" aria-hidden="true">♥</span>
-                <span className="rounded-full px-3 py-0.5 text-amber-900" style={{ background: CHIP[2] }}>{parts.cond}</span>
+                <span className="rounded-full px-3 py-0.5 text-[#24405a]" style={{ background: CHIP[2] }}>{parts.cond}</span>
               </div>
               <p className="sr-only">{result}</p>
             </div>
-          ) : <span className="text-sm text-slate-400">{spinning ? 'ลุ้นๆๆ...' : 'ดึงคันโยกแล้วผลจะออกมาเป็นประโยคตลกๆ'}</span>}
+          ) : <div className="grid min-h-[6rem] place-items-center text-sm text-[#4f6a82]">{spinning ? 'ลุ้นๆๆ...' : 'ดึงคันโยกแล้วผลจะออกมาเป็นประโยคตลกๆ'}</div>}
         </div>
+        </Panel>
 
         {history.length > 1 && (
-          <ul className="flex flex-wrap justify-center gap-1.5 text-sm">
-            {history.slice(1).map((h, i) => <li key={i} className="rounded-full bg-white px-3 py-0.5 font-semibold text-slate-500 shadow-sm ring-1 ring-pink-100">{h}</li>)}
-          </ul>
+          <Panel title="รอบก่อน ๆ">
+            <ul className="flex flex-wrap gap-1.5 text-sm">
+              {history.slice(1).map((h, i) => <li key={i} className="rounded-full border-2 border-[#24405a]/20 bg-white px-3 py-0.5 font-semibold text-[#4f6a82]">{h}</li>)}
+            </ul>
+          </Panel>
         )}
-      </div>
 
-      <details className="mt-4 rounded-2xl bg-white/80 p-3 ring-1 ring-pink-100">
-        <summary className="cursor-pointer font-semibold text-rose-600">แก้รายการรีล 2 และ 3</summary>
+      <details className="t-card p-3">
+        <summary className="cursor-pointer font-bold text-[#24405a]">แก้รายการรีล 2 และ 3</summary>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="text-xs font-bold text-slate-600">ทำอะไร (บรรทัดละ 1 อย่าง)
-            <textarea value={dutyText} onChange={(e) => setDutyText(e.target.value)} disabled={spinning} rows={6} className="mt-1 w-full rounded-lg border-2 border-pink-200 p-2 text-sm font-normal outline-none focus:border-pink-400" />
+          <label className="text-xs font-bold text-[#24405a]">ทำอะไร (บรรทัดละ 1 อย่าง)
+            <textarea value={dutyText} onChange={(e) => setDutyText(e.target.value)} disabled={spinning} rows={6} className="mt-1 w-full rounded-lg border-2 border-[#24405a]/25 p-2 text-sm font-normal outline-none focus:border-[#3ec1b0]" />
           </label>
-          <label className="text-xs font-bold text-slate-600">เงื่อนไข/รางวัล
-            <textarea value={condText} onChange={(e) => setCondText(e.target.value)} disabled={spinning} rows={6} className="mt-1 w-full rounded-lg border-2 border-pink-200 p-2 text-sm font-normal outline-none focus:border-pink-400" />
+          <label className="text-xs font-bold text-[#24405a]">เงื่อนไข/รางวัล
+            <textarea value={condText} onChange={(e) => setCondText(e.target.value)} disabled={spinning} rows={6} className="mt-1 w-full rounded-lg border-2 border-[#24405a]/25 p-2 text-sm font-normal outline-none focus:border-[#3ec1b0]" />
           </label>
         </div>
       </details>
-    </Shell>
+    </>
   )
 }

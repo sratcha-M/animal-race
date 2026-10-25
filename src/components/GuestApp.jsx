@@ -10,7 +10,7 @@ import MiniGuest from './MiniGuest'
 import { load, save } from '../lib/storage'
 import { beep } from '../lib/sound'
 
-const shell = 'min-h-dvh bg-[radial-gradient(ellipse_at_top,#ffffff_0%,#fff4f8_50%,#ffe3ee_100%)] px-4 py-6 text-slate-900'
+const shell = 'booth booth-bg min-h-dvh px-4 py-6'
 
 // หน้าจอของเพื่อนที่เข้ามาเล่นจากมือถือ: พิมพ์ชื่อ เลือกสัตว์ แล้วรอเล่นตามจอหลัก
 export default function GuestApp({ code }) {
@@ -79,16 +79,16 @@ export default function GuestApp({ code }) {
         <div className="mx-auto max-w-md">
           <div className="text-center">
             <div className="text-sm font-semibold text-sky-700">ห้อง {code}</div>
-            <h1 className="text-3xl font-extrabold text-rose-500">เข้าห้องเล่นกับเพื่อน</h1>
-            <p className="mt-1 text-sm text-rose-900/60">{hostAlive ? 'เจอห้องแล้ว! พิมพ์ชื่อแล้วเลือกสัตว์ได้เลย' : 'กำลังหาห้อง... ให้เจ้าของห้องเปิดหน้าเกมค้างไว้'}</p>
+            <h1 className="booth-title text-3xl text-[#24405a]">เข้าห้องเล่นกับเพื่อน</h1>
+            <p className="mt-1 text-sm text-[#4f6a82]">{hostAlive ? 'เจอห้องแล้ว! พิมพ์ชื่อแล้วเลือกสัตว์ได้เลย' : 'กำลังหาห้อง... ให้เจ้าของห้องเปิดหน้าเกมค้างไว้'}</p>
           </div>
           <label className="mt-5 block text-sm font-semibold text-slate-700" htmlFor="guest-name">ชื่อของคุณ</label>
           <input id="guest-name" value={name} maxLength={16} autoComplete="nickname"
                  onChange={(e) => setName(cleanName(e.target.value))}
                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) join() }}
                  placeholder="พิมพ์ชื่อ"
-                 className="mt-1 w-full rounded-xl border-2 border-rose-200 bg-white px-4 py-3 text-lg outline-none focus:border-rose-400" />
-          <p className={`mt-1 text-xs ${dupe ? 'text-rose-600' : 'text-rose-900/50'}`}>{dupe ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : 'ใช้ได้เฉพาะตัวอักษร ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน'}</p>
+                 className="mt-1 w-full rounded-xl border-2 border-[#cfe9e4] bg-white px-4 py-3 text-lg outline-none focus:border-[#3ec1b0]" />
+          <p className={`mt-1 text-xs ${dupe ? 'text-[#e0466e]' : 'text-[#4f6a82]'}`}>{dupe ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : 'ใช้ได้เฉพาะตัวอักษร ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน'}</p>
 
           <div className="mt-4 text-sm font-semibold text-slate-700">เลือกสัตว์</div>
           <div className="mt-1 grid grid-cols-5 gap-1.5">
@@ -96,7 +96,7 @@ export default function GuestApp({ code }) {
               const owner = takenBy(a.id)
               return (
                 <button key={a.id} type="button" disabled={!!owner} onClick={() => changeAnimal(a.id)} aria-pressed={animal === a.id} aria-label={a.name}
-                        className={`flex flex-col items-center overflow-hidden rounded-xl px-0.5 pb-0.5 pt-1 ${animal === a.id ? 'bg-rose-100 ring-2 ring-rose-400' : 'bg-white'} ${owner ? 'opacity-40' : ''}`}>
+                        className={`flex flex-col items-center overflow-hidden rounded-xl px-0.5 pb-0.5 pt-1 ${animal === a.id ? 'bg-[#ffe1e9] ring-2 ring-[#ff6f91]' : 'bg-white'} ${owner ? 'opacity-40' : ''}`}>
                   <Animal animal={a.id} className="w-full" />
                   <span className="max-w-full truncate text-[10px] text-slate-600">{owner ? owner.name : a.name}</span>
                 </button>
@@ -104,7 +104,7 @@ export default function GuestApp({ code }) {
             })}
           </div>
           <button onClick={join} disabled={!nameOk || dupe || !animal || full}
-                  className="mt-5 w-full rounded-2xl bg-amber-400 px-6 py-4 text-2xl font-extrabold text-amber-950 shadow-lg hover:bg-amber-300 active:scale-95 disabled:opacity-40">
+                  className="t-btn t-yellow mt-5 w-full px-6 py-4 text-2xl font-extrabold disabled:opacity-40">
             {full ? 'ห้องเต็มแล้ว (8 คน)' : joined && !mine ? 'กำลังเข้าห้อง...' : 'เข้าห้อง!'}
           </button>
         </div>
@@ -171,23 +171,23 @@ export default function GuestApp({ code }) {
       <div className="mx-auto max-w-md text-center">
         <div className="text-sm font-semibold text-sky-700">ห้อง {code} · {s.tab === 'bomb' ? 'ระเบิดเวลา' : MINI_BY_ID[s.tab]?.title ?? 'แข่งวิ่ง'}</div>
         <div className="float mx-auto mt-3 w-44"><Animal animal={mine.animal} number={mine.num} running /></div>
-        <h1 className="text-3xl font-extrabold text-rose-500">{mine.name}</h1>
-        <p className="mt-1 text-rose-900/70">เข้าห้องแล้ว! รอเจ้าของห้องเริ่มเกม</p>
+        <h1 className="booth-title text-3xl text-[#24405a]">{mine.name}</h1>
+        <p className="mt-1 text-[#4f6a82]">เข้าห้องแล้ว! รอเจ้าของห้องเริ่มเกม</p>
         <div className="mt-4 grid grid-cols-5 gap-1.5">
           {ANIMALS.map((a) => {
             const owner = takenBy(a.id)
             return (
               <button key={a.id} type="button" disabled={!!owner} onClick={() => changeAnimal(a.id)} aria-label={`เปลี่ยนเป็น${a.name}`}
-                      className={`overflow-hidden rounded-xl p-0.5 ${mine.animal === a.id ? 'bg-rose-100 ring-2 ring-rose-400' : 'bg-white'} ${owner ? 'opacity-30' : ''}`}>
+                      className={`overflow-hidden rounded-xl p-0.5 ${mine.animal === a.id ? 'bg-[#ffe1e9] ring-2 ring-[#ff6f91]' : 'bg-white'} ${owner ? 'opacity-30' : ''}`}>
                 <Animal animal={a.id} className="w-full" />
               </button>
             )
           })}
         </div>
-        <p className="mt-1 text-xs text-rose-900/50">แตะเพื่อเปลี่ยนสัตว์</p>
+        <p className="mt-1 text-xs text-[#4f6a82]">แตะเพื่อเปลี่ยนสัตว์</p>
         <ul className="mt-5 flex flex-wrap justify-center gap-2">
           {s.players.map((p) => (
-            <li key={p.id} className={`flex items-center gap-1 rounded-full py-1 pl-1 pr-3 text-sm ring-1 ${p.id === me ? 'bg-rose-100 ring-rose-300' : 'bg-white ring-rose-100'}`}>
+            <li key={p.id} className={`flex items-center gap-1 rounded-full py-1 pl-1 pr-3 text-sm ring-1 ${p.id === me ? 'bg-[#ffe1e9] ring-[#24405a]/20' : 'bg-white ring-[#24405a]/20'}`}>
               <span className="w-8"><Animal animal={p.animal} /></span>
               <span className="font-semibold">{p.name}{p.id === me && ' (คุณ)'}</span>
             </li>
@@ -208,8 +208,8 @@ function Center({ title, sub, me, running, bomb, boom }) {
           {bomb && <BombSvg className="absolute -right-8 -top-4 w-16" />}
         </div>
       )}
-      <h1 className="pop mt-3 text-3xl font-extrabold text-rose-600" key={title}>{title}</h1>
-      {sub && <p className="mt-2 max-w-xs text-rose-900/70">{sub}</p>}
+      <h1 className="pop mt-3 booth-title text-3xl text-[#24405a]" key={title}>{title}</h1>
+      {sub && <p className="mt-2 max-w-xs text-[#4f6a82]">{sub}</p>}
     </main>
   )
 }
@@ -223,11 +223,11 @@ function HoldingBomb({ onPass, auto }) {
     return () => clearInterval(t)
   }, [])
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-gradient-to-b from-rose-500 to-orange-500 px-4 text-center text-white">
+    <main className="booth flex min-h-dvh flex-col items-center justify-center gap-6 bg-gradient-to-b from-[#ff6f91] to-[#ff9a5a] px-4 text-center text-white">
       <div className="bomb w-48" style={{ position: 'static' }}><BombSvg className="w-full drop-shadow-2xl" /></div>
       <h1 className="text-4xl font-extrabold drop-shadow">ระเบิดอยู่ที่คุณ!</h1>
       {auto ? <p className="text-xl font-bold">ระเบิดวนเอง... ลุ้นให้มันไปต่อ!</p> : <button onClick={() => { if (!sent) { setSent(true); onPass(); setTimeout(() => setSent(false), 1200) } }}
-              className="w-full max-w-xs rounded-3xl bg-white px-6 py-8 text-4xl font-extrabold text-rose-600 shadow-2xl active:scale-95">
+              className="t-btn t-ghost booth-title w-full max-w-xs px-6 py-8 text-4xl">
         {sent ? 'กำลังส่ง...' : 'ส่งต่อ! ➜'}
       </button>}
     </main>
@@ -242,7 +242,7 @@ function GachaPhone({ g, me, mine, onSpin }) {
   if (result) {
     const t = TIERS[result.tier]
     return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center" style={{ background: t.light }}>
+      <main className="booth flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center" style={{ background: t.light }}>
         <div className="text-lg font-extrabold" style={{ color: t.color }}>{result.tier === 'none' ? 'ไข่เปล่า เสียใจด้วย' : `คุณได้ระดับ ${t.label}!`}</div>
         <div className="float w-44"><Animal animal={mine.animal} number={mine.num} running /></div>
         <h1 className="pop text-4xl font-extrabold text-slate-800">{result.prize ?? 'ไม่ได้รางวัลรอบนี้'}</h1>
@@ -252,7 +252,7 @@ function GachaPhone({ g, me, mine, onSpin }) {
   }
   return (
     <main className={`${shell} flex flex-col items-center justify-center gap-5 text-center`}>
-      <h1 className="text-3xl font-extrabold text-rose-500">กาชาปอง</h1>
+      <h1 className="booth-title text-3xl text-[#24405a]">กาชาปอง</h1>
       <div className={spun ? 'egg-out' : 'float'}>
         <svg viewBox="0 0 100 100" className="w-40 overflow-visible" aria-hidden="true">
           <path d="M5 50 A45 45 0 0 0 95 50 Z" fill="#fff" stroke="#e5e7eb" strokeWidth="2" />
@@ -260,9 +260,9 @@ function GachaPhone({ g, me, mine, onSpin }) {
         </svg>
       </div>
       {spun
-        ? <p className="text-xl font-bold text-rose-600">หมุนแล้ว! ลุ้นดูผลที่จอหลัก...</p>
+        ? <p className="text-xl font-bold text-[#e0466e]">หมุนแล้ว! ลุ้นดูผลที่จอหลัก...</p>
         : <button onClick={() => { setSent(true); onSpin(); try { navigator.vibrate?.(80) } catch { /* ignore */ } beep(500, 0.08, 'triangle') }}
-                  className="w-full max-w-xs rounded-3xl bg-amber-400 px-6 py-8 text-4xl font-extrabold text-amber-950 shadow-xl active:scale-95">หมุนเลย!</button>}
+                  className="t-btn t-yellow w-full max-w-xs px-6 py-8 text-4xl font-extrabold">หมุนเลย!</button>}
     </main>
   )
 }

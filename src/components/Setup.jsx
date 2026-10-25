@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import Animal from './Animal'
-import { AI_BG } from '../lib/aiArt'
 import { ANIMALS, MAX_PLAYERS, MIN_PLAYERS, animalById } from '../game/constants'
 import { cleanName, nameTaken } from '../lib/name'
 
@@ -21,6 +20,26 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
     setPlayers([...players, { id: nextId++, name: n.slice(0, 16), animal: firstFree() }])
     setName('')
   }
+  // วางหลายชื่อทีเดียว (ก๊อปจาก Excel: คั่นด้วยขึ้นบรรทัดใหม่หรือแท็บ) — ข้ามชื่อว่าง/ซ้ำ และหยุดเมื่อครบจำนวน
+  const [pasteInfo, setPasteInfo] = useState('')
+  const onPaste = (e) => {
+    const text = e.clipboardData.getData('text')
+    if (!/[\r\n\t]/.test(text.trim())) return
+    e.preventDefault()
+    const list = [...players]
+    let skipped = 0
+    for (const raw of text.split(/[\r\n\t]+/)) {
+      const n = cleanName(raw).trim()
+      if (!n) continue
+      if (nameTaken(n, list) || list.length >= MAX_PLAYERS) { skipped++; continue }
+      const animal = ANIMALS.find((a) => !list.some((p) => p.animal === a.id))?.id
+      list.push({ id: nextId++, name: n, animal })
+    }
+    const added = list.length - players.length
+    setPlayers(list)
+    setName(''); setNameHint(false); setDupHint(false)
+    setPasteInfo(`เพิ่ม ${added} คน${skipped ? ` (ข้าม ${skipped} ชื่อที่ซ้ำหรือเกิน ${MAX_PLAYERS} คน)` : ''}`)
+  }
   const update = (id, patch) => setPlayers(players.map((p) => (p.id === id ? { ...p, ...patch } : p)))
   const remove = (id) => { const p = players.find((x) => x.id === id); if (p) onRemove?.(p); setPlayers(players.filter((x) => x.id !== id)) }
   const addDemo = () => {
@@ -32,125 +51,136 @@ export default function Setup({ players, setPlayers, onStart, onRemove, tabs = n
 
   const ready = players.length >= MIN_PLAYERS && players.every((p) => p.name.trim())
 
+  // ธีมตู้ตั๋วพาสเทล: พื้นมิ้นต์ + วงล้อหมุนช้า ๆ / โปสเตอร์หัวโค้ง / การ์ดตู้ขายตั๋ว / ผู้เล่นเป็นตั๋วบนถาดชมพู
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      {tabs}
-      {poster ? (
-        <header className="mb-6 text-center">
-          <img src={poster} alt={title} className="mx-auto max-h-[28rem] w-auto max-w-full rounded-3xl object-contain shadow-xl ring-4 ring-white" />
-          <h1 className="sr-only">{title}</h1>
-          <p className="mt-3 text-rose-900/70">{subtitle}</p>
-        </header>
-      ) : (
-        <header className="relative isolate mb-6 overflow-hidden rounded-3xl pb-4 pt-2 text-center">
-          {AI_BG && (
-            <img src={AI_BG} alt="" className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover object-[center_60%] opacity-70 [mask-image:linear-gradient(to_bottom,#000_55%,transparent)]" />
-          )}
-          <div className="float mx-auto mb-1 w-80 max-w-full">
-            <div className="flex items-end justify-center gap-1"><div className="w-24"><Animal animal="rabbit" running /></div><div className="w-28"><Animal animal="cat" number="★" running /></div><div className="w-24"><Animal animal="pig" running /></div></div>
-          </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-rose-500 sm:text-5xl">{title}</h1>
-          <p className="mt-1 text-rose-900/70">{subtitle}</p>
-        </header>
-      )}
-
-      <div className="mb-5 flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => { const v = cleanName(e.target.value); setNameHint(v !== e.target.value); setDupHint(false); setName(v) }}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) add() }}
-          placeholder={players.length >= MAX_PLAYERS ? `ครบ ${MAX_PLAYERS} คนแล้ว` : 'พิมพ์ชื่อผู้เล่น แล้วกดเพิ่ม'}
-          disabled={players.length >= MAX_PLAYERS}
-          maxLength={16}
-          className="min-w-0 flex-1 rounded-xl border-2 border-rose-200 bg-white px-4 py-3 text-lg outline-none focus:border-rose-400 disabled:bg-slate-100"
-        />
-        <button
-          type="button"
-          onClick={add}
-          disabled={players.length >= MAX_PLAYERS}
-          className="rounded-xl bg-rose-500 px-5 py-3 text-lg font-semibold text-white shadow hover:bg-rose-600 active:scale-95 disabled:opacity-40"
-        >
-          + เพิ่ม
-        </button>
+    <div className={`booth relative isolate mx-auto w-full px-4 py-6 ${poster ? 'max-w-6xl' : 'max-w-3xl'}`}>
+      <div aria-hidden className="booth-bg pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="booth-wheel absolute -left-24 top-[22%] aspect-square w-[min(640px,90vw)] rounded-full border-[10px] border-[#24405a] opacity-90">
+          <span className="absolute left-1/2 top-1/2 size-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#24405a]" />
+        </div>
       </div>
-
-      <p className={`-mt-3 mb-4 px-1 text-sm ${nameHint || dupHint ? 'text-rose-600' : 'text-rose-900/50'}`}>
-        {dupHint ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : 'ชื่อใช้ได้เฉพาะตัวอักษร (ไทยหรืออังกฤษ) ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน'}
-      </p>
-
-      {players.length === 0 && (
-        <div className="rounded-2xl border-2 border-dashed border-rose-300 bg-white/60 p-8 text-center text-rose-800">
-          ยังไม่มีผู้เล่น
-          <button onClick={addDemo} className="ml-2 font-semibold text-rose-500 underline underline-offset-4">
-            เพิ่มตัวอย่าง 4 คน
-          </button>
+      {tabs}
+      <div className={poster ? 'lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-10' : ''}>
+      {poster && (
+        <div className="mx-auto mb-8 w-fit max-w-full lg:sticky lg:top-6 lg:mb-0 lg:mt-4">
+          <img src={poster} alt={title}
+               className="block h-auto max-h-[34rem] w-auto max-w-full rounded-t-[999px] rounded-b-3xl border-[6px] border-[#24405a] shadow-[0_10px_0_#24405a] lg:max-h-[calc(100dvh-16rem)]" />
         </div>
       )}
+      <div>
+      <section className="overflow-hidden rounded-[28px] border-4 border-[#24405a] bg-white shadow-[0_10px_0_#24405a]">
+        <div className="flex items-center justify-between gap-3 border-b-4 border-[#24405a] bg-[#3ec1b0] px-4 py-3 sm:px-6">
+          <h1 className="booth-title min-w-0 text-2xl text-white [text-shadow:0_3px_0_#24405a] sm:text-4xl">{title}</h1>
+          <span className="shrink-0 rounded-full border-[3px] border-[#24405a] bg-[#ffd166] px-3 py-0.5 font-bold text-[#24405a]">{players.length} / {MAX_PLAYERS} ใบ</span>
+        </div>
+        <div className="flex flex-col gap-3 p-4 sm:p-6">
+          <p className="font-bold text-[#24405a]/80">{subtitle}</p>
+          <div className="flex gap-2">
+            <input
+              value={name}
+              onChange={(e) => { const v = cleanName(e.target.value); setNameHint(v !== e.target.value); setDupHint(false); setPasteInfo(''); setName(v) }}
+              onPaste={onPaste}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) add() }}
+              placeholder={players.length >= MAX_PLAYERS ? `ครบ ${MAX_PLAYERS} คนแล้ว` : 'พิมพ์ชื่อ หรือวางจาก Excel'}
+              aria-label="ชื่อผู้เล่น"
+              disabled={players.length >= MAX_PLAYERS}
+              maxLength={16}
+              className="min-w-0 flex-1 rounded-2xl border-[3px] border-[#24405a] bg-[#f2fbf9] px-4 py-2.5 text-lg text-[#24405a] outline-none placeholder:text-[#24405a]/45 focus:bg-white disabled:opacity-60"
+            />
+            <button
+              type="button"
+              onClick={add}
+              disabled={players.length >= MAX_PLAYERS}
+              className="shrink-0 rounded-2xl border-[3px] border-[#24405a] bg-[#ffd166] px-4 text-lg font-bold text-[#24405a] shadow-[0_4px_0_#24405a] hover:bg-[#ffdb85] active:translate-y-1 active:shadow-none disabled:opacity-40"
+            >
+              + ออกตั๋ว
+            </button>
+          </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {players.map((p, i) => (
-          <li key={p.id} className="pop rounded-2xl bg-white p-4 shadow-sm ring-1 ring-rose-100">
-            <div className="flex items-center gap-3">
-              <div className="w-20 shrink-0"><Animal animal={p.animal} number={i + 1} /></div>
-              <div className="min-w-0 flex-1">
-                <input
-                  value={p.name}
-                  readOnly={p.remote}
-                  onChange={(e) => { const v = cleanName(e.target.value); if (!nameTaken(v, players, p.id)) update(p.id, { name: v }) }}
-                  aria-label={`ชื่อผู้เล่น ${i + 1}`}
-                  className="w-full rounded-lg border border-transparent px-2 py-1 text-lg font-semibold hover:border-slate-200 focus:border-rose-300 focus:outline-none"
-                />
-                <div className="px-2 text-sm text-slate-500">
-                  {animalById(p.animal).name} · เบอร์ {i + 1}
-                  {p.remote && <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">มือถือ</span>}
-                </div>
+          <p className={`-mt-1 px-1 text-sm ${nameHint || dupHint ? 'font-bold text-[#e0466e]' : pasteInfo ? 'font-bold text-[#1f8f80]' : 'text-[#4f6a82]'}`}>
+            {dupHint ? 'ชื่อนี้มีคนใช้แล้ว กรุณาใช้ชื่ออื่น' : pasteInfo || 'ชื่อใช้ได้เฉพาะตัวอักษร (ไทยหรืออังกฤษ) ไม่รับตัวเลข สัญลักษณ์ หรืออีโมจิ และห้ามซ้ำกัน · วางหลายชื่อจาก Excel ได้ทีเดียว'}
+          </p>
+
+          <div className="rounded-[18px] bg-[#ffe1e9] p-3">
+            {players.length === 0 && (
+              <div className="rounded-2xl border-[3px] border-dashed border-[#ff6f91] p-8 text-center text-[#24405a]">
+                ยังไม่มีใครซื้อตั๋ว
+                <button onClick={addDemo} className="ml-2 font-bold text-[#e0466e] underline underline-offset-4">
+                  เพิ่มตัวอย่าง 4 คน
+                </button>
               </div>
-              <button
-                onClick={() => remove(p.id)}
-                aria-label={`ลบ ${p.name}`}
-                className="rounded-full px-2 text-2xl leading-none text-slate-400 hover:bg-rose-50 hover:text-rose-500"
-              >
-                ×
-              </button>
-            </div>
-            <div className="mt-3 grid grid-cols-5 gap-1.5">
-              {ANIMALS.map((a) => {
-                const owner = taken(a.id, p.id)
-                const selected = p.animal === a.id
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => update(p.id, { animal: a.id })}
-                    disabled={!!owner || p.remote}
-                    title={owner ? `${a.name} — ${owner.name} เลือกแล้ว` : a.name}
-                    aria-label={a.name}
-                    aria-pressed={selected}
-                    className={`flex flex-col items-center overflow-hidden rounded-xl px-0.5 pb-0.5 pt-1 transition ${
-                      selected ? 'bg-rose-100 ring-2 ring-rose-400' : 'bg-slate-50 hover:bg-rose-50'
-                    } ${owner ? 'cursor-not-allowed opacity-45' : 'hover:scale-105'}`}
-                  >
-                    <Animal animal={a.id} className="w-full" />
-                    <span className="max-w-full truncate text-[10px] leading-tight text-slate-600 sm:text-xs">{owner ? owner.name : a.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </li>
-        ))}
-      </ul>
+            )}
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {players.map((p, i) => (
+                <li key={p.id} className="pop booth-ticket px-5 py-3 drop-shadow-[0_3px_0_#24405a]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 shrink-0"><Animal animal={p.animal} /></div>
+                    <div className="min-w-0 flex-1 border-l-[3px] border-dotted border-[#ff6f91] pl-3">
+                      <input
+                        value={p.name}
+                        readOnly={p.remote}
+                        onChange={(e) => { const v = cleanName(e.target.value); if (!nameTaken(v, players, p.id)) update(p.id, { name: v }) }}
+                        aria-label={`ชื่อผู้เล่น ${i + 1}`}
+                        className="w-full rounded-md border border-transparent bg-transparent px-1 text-lg font-bold text-[#24405a] hover:border-[#cfe9e4] focus:border-[#3ec1b0] focus:outline-none"
+                      />
+                      <div className="px-1 text-xs text-[#4f6a82]">
+                        No.{String(i + 1).padStart(3, '0')} · {animalById(p.animal).name}
+                        {p.remote && <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-700">มือถือ</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => remove(p.id)}
+                      aria-label={`ลบ ${p.name}`}
+                      className="rounded-full px-2 text-2xl leading-none text-[#4f6a82]/60 hover:bg-[#ff6f91]/10 hover:text-[#e0466e]"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="mt-2 grid grid-cols-5 gap-1 border-t-2 border-dotted border-[#cfe9e4] pt-2">
+                    {ANIMALS.map((a) => {
+                      const owner = taken(a.id, p.id)
+                      const selected = p.animal === a.id
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => update(p.id, { animal: a.id })}
+                          disabled={!!owner || p.remote}
+                          title={owner ? `${a.name} — ${owner.name} เลือกแล้ว` : a.name}
+                          aria-label={a.name}
+                          aria-pressed={selected}
+                          className={`flex flex-col items-center overflow-hidden rounded-lg px-0.5 pb-0.5 pt-1 transition ${
+                            selected ? 'bg-[#bdeee6] ring-2 ring-[#24405a]' : 'hover:bg-[#f2fbf9]'
+                          } ${owner ? 'cursor-not-allowed opacity-35' : 'hover:scale-105'}`}
+                        >
+                          <Animal animal={a.id} className="w-full" />
+                          <span className="max-w-full truncate text-[10px] leading-tight text-[#4f6a82] sm:text-xs">{owner ? owner.name : a.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
-      <div className="sticky bottom-0 mt-6 flex flex-col items-center gap-2 bg-gradient-to-t from-[#fff4f8] via-[#fff4f8] to-transparent pb-4 pt-6">
-        <button
-          onClick={onStart}
-          disabled={!ready}
-          className="w-full max-w-sm rounded-2xl bg-amber-400 px-8 py-4 text-2xl font-extrabold text-amber-950 shadow-lg shadow-amber-500/30 hover:bg-amber-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {startLabel}
-        </button>
-        <p className="text-sm text-rose-900/60">
-          {players.length < MIN_PLAYERS ? `ต้องมีผู้เล่นอย่างน้อย ${MIN_PLAYERS} คน` : `${players.length} / ${MAX_PLAYERS} คน`}
-        </p>
+      <div className="sticky bottom-0 z-10 mt-6 pb-4">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-2">
+          <button
+            onClick={onStart}
+            disabled={!ready}
+            className="booth-title w-full rounded-[20px] border-4 border-[#24405a] bg-[#ff6f91] px-6 py-3 text-3xl text-white shadow-[0_8px_0_#24405a] transition hover:bg-[#ff829f] active:translate-y-2 active:shadow-none disabled:cursor-not-allowed disabled:bg-[#c9cfd6] sm:text-4xl"
+          >
+            {startLabel}
+          </button>
+          {players.length < MIN_PLAYERS && (
+            <p className="rounded-full border-[3px] border-[#24405a] bg-white px-3 py-0.5 text-sm font-bold text-[#24405a]">ต้องมีผู้เล่นอย่างน้อย {MIN_PLAYERS} คน</p>
+          )}
+        </div>
+      </div>
+      </div>
       </div>
     </div>
   )

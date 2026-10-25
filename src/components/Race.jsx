@@ -8,7 +8,7 @@ import { beep, fanfare } from '../lib/sound'
 
 const CAT_W = 'var(--cat-w)'
 const leftFor = (p) => `calc(${(p * 100).toFixed(3)}% - ${p.toFixed(4)} * ${CAT_W})`
-const RANK_STYLE = ['bg-amber-400 text-amber-950', 'bg-slate-300 text-slate-800', 'bg-orange-300 text-orange-950']
+const RANK_STYLE = ['bg-amber-400 text-[#24405a]', 'bg-slate-300 text-slate-800', 'bg-orange-300 text-orange-950']
 
 export default function Race({ players, round = 1, eliminating = false, onFinish, onQuit }) {
   const race = useRef(null)
@@ -97,19 +97,19 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
     <div className="flex min-h-full flex-col">
       {/* แถบบน */}
       <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <button onClick={onQuit} className="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-white/70">← กลับ</button>
-        <h2 className="text-xl font-extrabold text-rose-600">{eliminating ? `รอบที่ ${round} · เหลือ ${players.length} คน` : 'สัตว์น้อยวิ่งแข่ง'}</h2>
+        <button onClick={onQuit} className="t-btn t-ghost shrink-0 px-3 py-1 text-sm">← กลับ</button>
+        <h2 className="booth-title min-w-0 truncate text-2xl text-[#24405a] sm:text-3xl">{eliminating ? `รอบที่ ${round} · เหลือ ${players.length} คน` : 'สัตว์น้อยวิ่งแข่ง'}</h2>
         <button
           onClick={() => setPhase((p) => (p === 'running' ? 'paused' : p === 'paused' ? 'running' : p))}
           disabled={phase !== 'running' && phase !== 'paused'}
-          className="rounded-lg bg-white/80 px-3 py-1.5 font-semibold text-rose-600 shadow-sm hover:bg-white disabled:opacity-30"
+          className="t-btn t-ghost shrink-0 px-3 py-1 text-sm"
         >
           {phase === 'paused' ? '▶ เล่นต่อ' : '❚❚ หยุด'}
         </button>
       </div>
 
       {/* สนาม */}
-      <div ref={trackEl} className="track relative mx-2 flex flex-1 flex-col overflow-hidden rounded-3xl bg-gradient-to-b from-[#bfe6ff] via-[#dff3ff] to-[#fff0f6] shadow-inner ring-4 ring-white sm:mx-4">
+      <div ref={trackEl} className="track relative mx-2 flex flex-1 flex-col overflow-hidden rounded-3xl border-4 border-[#24405a] bg-gradient-to-b from-[#bfe6ff] via-[#dff3ff] to-[#fff0f6] shadow-[0_8px_0_#24405a] sm:mx-4">
         {AI_BG && <img src={AI_BG} alt="" className="pointer-events-none absolute inset-x-0 top-0 h-28 w-full object-cover object-[center_58%]" />}
         {/* ฉากหลังน่ารัก: เมฆ เนินเขา ดอกไม้ */}
         {!AI_BG && (
@@ -137,7 +137,7 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
              style={{ '--cat-w': `clamp(70px, min(17vw, calc((100dvh - 260px) / ${r.cats.length} * 1.15)), 140px)` }}>
           {/* เส้นชัย */}
           <div className="checker-pastel absolute bottom-0 top-0 z-10 w-3" style={{ right: 'calc(var(--cat-w) * 0.08 + 12px)' }} />
-          <div className="absolute -top-[6px] z-10 -translate-y-full rounded-t-lg bg-rose-400 px-2 py-0.5 text-xs font-bold text-white"
+          <div className="absolute -top-[6px] z-10 -translate-y-full rounded-t-lg bg-[#ff6f91] px-2 py-0.5 text-xs font-bold text-white"
                style={{ right: 'calc(var(--cat-w) * 0.08 + 2px)' }}>เส้นชัย</div>
           {/* เส้นปล่อยตัว */}
           <div className="absolute bottom-0 top-0 z-10 w-1 bg-white/90" style={{ left: 'calc(var(--cat-w) + 10px)' }} />
@@ -155,10 +155,10 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
                   <span className="zzz pointer-events-none absolute -top-2 right-0 text-sm font-extrabold text-indigo-400">z Z</span>
                   {/* คำพูดของสัตว์ */}
                   <div ref={(el) => (bubbleEls.current[i] = el)} style={{ display: 'none' }}
-                       className="bubble absolute top-0 z-20 -translate-y-1/2 whitespace-nowrap rounded-xl bg-white px-2 py-0.5 text-[11px] font-bold text-rose-600 shadow-md ring-2 ring-rose-200 sm:text-sm" />
+                       className="bubble absolute top-0 z-20 -translate-y-1/2 whitespace-nowrap rounded-xl bg-white px-2 py-0.5 text-[11px] font-bold text-[#e0466e] shadow-md ring-2 ring-[#24405a]/20 sm:text-sm" />
                   {/* ป้ายชื่อ */}
-                  <div className={`absolute -top-1 left-1/2 max-w-[160%] -translate-x-1/2 -translate-y-full truncate whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold shadow sm:text-sm ${
-                    leader === i && phase !== 'countdown' && !(i in ranks) ? 'bg-rose-400 text-white' : 'bg-white/95 text-slate-700'}`}>
+                  <div className={`absolute -top-1 left-1/2 max-w-[160%] -translate-x-1/2 -translate-y-full truncate whitespace-nowrap rounded-full border-2 border-[#24405a] px-2 py-0.5 text-xs font-bold sm:text-sm ${
+                    leader === i && phase !== 'countdown' && !(i in ranks) ? 'bg-[#ff6f91] text-white' : 'bg-white text-[#24405a]'}`}>
                     {h.name}
                   </div>
                   {i in ranks && (
@@ -175,7 +175,7 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
         {/* ประกาศกลางจอ */}
         {announce && phase === 'running' && (
           <div className="pointer-events-none absolute inset-x-0 top-[38%] z-30 grid place-items-center">
-            <div key={announce} className="pop rounded-2xl bg-rose-500/90 px-6 py-2 text-2xl font-extrabold text-white shadow-xl sm:text-4xl">
+            <div key={announce} className="pop booth-title rounded-2xl border-4 border-[#24405a] bg-[#ff6f91] px-6 py-2 text-3xl text-white shadow-[0_6px_0_#24405a] sm:text-5xl">
               {announce}
             </div>
           </div>
@@ -185,15 +185,15 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
         </div>
         {/* นับถอยหลัง / หยุดชั่วคราว */}
         {(phase === 'countdown' || phase === 'paused') && (
-          <div className="absolute inset-0 grid place-items-center bg-rose-950/20 backdrop-blur-[1px]">
+          <div className="absolute inset-0 grid place-items-center bg-[#24405a]/20 backdrop-blur-[1px]">
             {phase === 'countdown' ? (
               <div key={count} className="pop text-8xl font-extrabold text-white drop-shadow-[0_4px_0_rgba(0,0,0,.25)] sm:text-9xl">
                 {count > 0 ? count : 'ออกตัว!'}
               </div>
             ) : (
-              <div className="pop rounded-2xl bg-white px-8 py-6 text-center shadow-xl">
-                <div className="text-3xl font-extrabold text-rose-600">หยุดชั่วคราว</div>
-                <button onClick={() => setPhase('running')} className="mt-4 rounded-xl bg-rose-500 px-6 py-2 text-lg font-semibold text-white">
+              <div className="t-modal pop px-8 py-6 text-center">
+                <div className="booth-title text-3xl text-[#24405a]">หยุดชั่วคราว</div>
+                <button onClick={() => setPhase('running')} className="t-btn t-pink mt-4 px-6 py-2 text-lg">
                   เล่นต่อ
                 </button>
               </div>
@@ -201,7 +201,7 @@ export default function Race({ players, round = 1, eliminating = false, onFinish
           </div>
         )}
       </div>
-      <p className="py-2 text-center text-xs text-rose-900/50">
+      <p className="py-2 text-center text-xs text-[#4f6a82]">
         กด Esc หรือ P เพื่อหยุดชั่วคราว<span className="sm:hidden"> · หมุนจอแนวนอนจะเห็นตัวใหญ่ขึ้น</span>
       </p>
     </div>

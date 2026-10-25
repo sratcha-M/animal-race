@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell, BigButton, ResultModal } from './MiniShell'
+import { Shell, BigButton, ResultModal, Panel, Choice } from './MiniShell'
 import Animal from './Animal'
 import { rand, sleep, shuffle } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
@@ -159,34 +159,47 @@ export default function Balloon({ players, onBack, onNet, registerHandler }) {
       'balloon-tap': (from, d) => { const p = alive.find((x) => x.id === d?.id); if (p) tap(p) },
     })
 
+  const side = (
+    <>
+      {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
+        : <BigButton onClick={start} disabled={phase === 'float'}>{phase === 'float' ? (canTap ? 'แตะลูกโป่งได้เลย!' : 'ลูกโป่งกำลังแตก...') : phase === 'done' ? 'ปล่อยลูกโป่งอีกรอบ' : 'ปล่อยลูกโป่ง!'}</BigButton>}
+      <p className="-mt-1 text-center text-xs text-[#4f6a82]">ลูกโป่งแตกทีละลูก ลูกสุดท้ายที่เหลืออยู่คือคนที่ถูกเลือก</p>
+      {popped.length > 0 && (
+        <Panel title="ลำดับที่แตก" extra={`${popped.length}/${alive.length}`}>
+          <ol className="flex flex-wrap gap-1.5" aria-label="ลำดับที่แตก">
+            {popped.map((id, k) => {
+              const p = roster.find((x) => x.id === id)
+              return (
+                <li key={id} className="pop flex items-center gap-1 rounded-full border-2 border-[#24405a] bg-white py-0.5 pl-1 pr-3 text-sm font-bold">
+                  <span className="w-7"><Animal animal={p.animal} /></span><span className="text-[#e0466e]">{k + 1}</span>{p.name}
+                </li>
+              )
+            })}
+          </ol>
+        </Panel>
+      )}
+      <Panel title="ตั้งค่า">
+        <div className="flex flex-col gap-3">
+          <Choice label="วิธีแตก" value={mode} disabled={phase === 'float'} onChange={(k) => { setMode(k); again() }}
+                  options={Object.entries(MODES).map(([k, v]) => ({ k, label: v.label, desc: v.desc }))} />
+          <div>
+            <Choice label="เวลา" value={dur} disabled={phase === 'float'} onChange={setDur} cols={CHIPS[mode].length}
+                    options={CHIPS[mode].map((sec) => ({ k: sec, label: sec === 0 ? 'ไม่จำกัด' : `${sec} วิ` }))} />
+            <label className="mt-2 flex items-center justify-end gap-1 text-xs text-[#4f6a82]">กำหนดเอง
+              <input type="number" inputMode="numeric" min={5} max={300} value={dur || ''} placeholder="วิ" disabled={phase === 'float'} aria-label="กำหนดเวลาเอง (วินาที)"
+                     onChange={(e) => setDur(Math.max(0, Math.min(300, Number(e.target.value) || 0)))}
+                     className="w-16 rounded-lg border-2 border-[#24405a]/30 px-1.5 py-1 text-center text-sm disabled:opacity-50" />วิ
+            </label>
+            <p className="mt-1 text-xs text-[#4f6a82]">{mode === 'auto' ? `ลูกโป่งจะแตกจนเหลือลูกเดียวภายในประมาณ ${effDur} วินาที${effDur > dur && dur ? ' (ขั้นต่ำ 1.5 วิต่อลูก)' : ''}` : dur ? `แตะลูกโป่งให้ทันใน ${dur} วินาที หมดเวลาแล้วที่เหลือจะแตกเอง` : 'แตะได้ไม่จำกัดเวลา'}</p>
+          </div>
+        </div>
+      </Panel>
+    </>
+  )
+
   return (
-    <Shell title="ลูกโป่งแตก" right={`${left} ลูก`} onBack={() => { run.current = -1; onBack() }}>
-      <div role="radiogroup" aria-label="วิธีแตก" className="mb-2 grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-rose-100">
-        {Object.entries(MODES).map(([k, v]) => (
-          <button key={k} onClick={() => { setMode(k); again() }} aria-pressed={mode === k} disabled={phase === 'float'}
-                  className={`rounded-xl px-2 py-1.5 text-sm font-bold transition disabled:opacity-50 ${mode === k ? 'bg-rose-400 text-white shadow' : 'text-rose-500 hover:bg-rose-50'}`}>
-            {v.label}<div className="text-[10px] font-normal leading-tight opacity-80">{v.desc}</div>
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-2 flex flex-wrap items-center gap-1.5 rounded-2xl bg-white px-2.5 py-2 shadow-sm ring-1 ring-rose-100" role="group" aria-label="เลือกเวลา">
-        <span className="text-sm font-extrabold text-rose-500">เวลา</span>
-        {CHIPS[mode].map((sec) => (
-          <button key={sec} onClick={() => setDur(sec)} disabled={phase === 'float'} aria-pressed={dur === sec}
-                  className={`rounded-full px-3 py-1 text-sm font-bold ring-1 transition disabled:opacity-50 ${dur === sec ? 'bg-rose-400 text-white ring-rose-400' : 'bg-white text-rose-500 ring-rose-200 hover:bg-rose-50'}`}>
-            {sec === 0 ? 'ไม่จำกัด' : `${sec} วิ`}
-          </button>
-        ))}
-        <label className="ml-auto flex items-center gap-1 text-xs text-slate-500">เอง
-          <input type="number" inputMode="numeric" min={5} max={300} value={dur || ''} placeholder="วิ" disabled={phase === 'float'} aria-label="กำหนดเวลาเอง (วินาที)"
-                 onChange={(e) => setDur(Math.max(0, Math.min(300, Number(e.target.value) || 0)))}
-                 className="w-14 rounded-lg border border-rose-200 px-1.5 py-1 text-center text-sm text-slate-700 disabled:opacity-50" />วิ
-        </label>
-        <p className="w-full text-xs text-slate-500">{mode === 'auto' ? `ลูกโป่งจะแตกจนเหลือลูกเดียวภายในประมาณ ${effDur} วินาที${effDur > dur && dur ? ' (ขั้นต่ำ 1.5 วิต่อลูก)' : ''}` : dur ? `แตะลูกโป่งให้ทันใน ${dur} วินาที หมดเวลาแล้วที่เหลือจะแตกเอง` : 'แตะได้ไม่จำกัดเวลา'}</p>
-      </div>
-
-      <div className="relative aspect-[3/4] w-full select-none overflow-hidden rounded-[2rem] border-[10px] border-white bg-gradient-to-b from-[#ffd9ec] via-[#e4f3ff] to-[#fff6d9] shadow-xl ring-4 ring-pink-200">
+    <Shell title="ลูกโป่งแตก" right={`${left} ลูก`} onBack={() => { run.current = -1; onBack() }} side={side}>
+      <div className="relative mx-auto aspect-[3/4] w-[min(100%,calc((100dvh-8rem)*0.75))] min-w-[15rem] select-none overflow-hidden rounded-[2rem] border-4 border-[#24405a] bg-gradient-to-b from-[#ffd9ec] via-[#e4f3ff] to-[#fff6d9] shadow-[0_8px_0_#24405a]">
         {/* เมฆฟู ๆ + ประกายดาว */}
         {[['6%', 46, 0.9], ['20%', 62, 0.7], ['34%', 54, 0.55]].map(([top, dur, sc], i) => (
           <svg key={i} viewBox="0 0 120 60" className="cloud absolute w-28 opacity-90" style={{ top, animationDuration: `${dur}s`, animationDelay: `${-i * 17}s`, scale: String(sc) }} aria-hidden="true">
@@ -207,11 +220,11 @@ export default function Balloon({ players, onBack, onNet, registerHandler }) {
         <div className="pointer-events-none absolute inset-0 z-[8] transition-opacity duration-700" style={{ opacity: tense && phase === 'float' ? 1 : 0, background: 'radial-gradient(circle at 50% 50%, transparent 38%, rgba(150,90,190,.38) 100%)' }} />
 
         {phase === 'float' && secLeft != null && (
-          <div className="absolute left-2 top-2 z-[9] rounded-full bg-white/90 px-2.5 py-1 text-sm font-extrabold tabular-nums text-rose-500 shadow ring-2 ring-pink-200" aria-label="เวลาที่เหลือ">⏱ {secLeft}</div>
+          <div className="absolute left-2 top-2 z-[9] rounded-full bg-white/90 px-2.5 py-1 text-sm font-extrabold tabular-nums text-[#e0466e] shadow ring-2 ring-pink-200" aria-label="เวลาที่เหลือ">⏱ {secLeft}</div>
         )}
         {/* ฟองข้อความด้านบน */}
         <div className="absolute inset-x-0 top-[2.5%] z-[9] px-14 text-center">
-          <span className={`inline-block rounded-full bg-white/95 px-4 py-1.5 text-sm font-extrabold shadow ring-2 ring-pink-200 ${tense && phase === 'float' ? 'animate-pulse text-fuchsia-600' : 'text-rose-500'}`}>{bubble}</span>
+          <span className={`inline-block rounded-full bg-white/95 px-4 py-1.5 text-sm font-extrabold shadow ring-2 ring-pink-200 ${tense && phase === 'float' ? 'animate-pulse text-fuchsia-600' : 'text-[#e0466e]'}`}>{bubble}</span>
         </div>
 
         {/* ลูกโป่ง */}
@@ -251,7 +264,7 @@ export default function Balloon({ players, onBack, onNet, registerHandler }) {
                       <span className="block w-[96%]"><Animal animal={p.animal} /></span>
                     </span>
                     {/* ป้ายชื่อน่ารัก ๆ */}
-                    <span className="absolute inset-x-[-6%] top-[76%] mx-auto block w-max max-w-[118%] truncate rounded-full bg-white px-2 py-0.5 text-center text-[11px] font-extrabold text-rose-500 shadow ring-2 ring-pink-200 sm:text-sm">{p.name}</span>
+                    <span className="absolute inset-x-[-6%] top-[76%] mx-auto block w-max max-w-[118%] truncate rounded-full bg-white px-2 py-0.5 text-center text-[11px] font-extrabold text-[#e0466e] shadow ring-2 ring-pink-200 sm:text-sm">{p.name}</span>
                   </span>
                 </button>
               )}
@@ -278,24 +291,6 @@ export default function Balloon({ players, onBack, onNet, registerHandler }) {
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-2">
-        {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
-          : <BigButton onClick={start} disabled={phase === 'float'}>{phase === 'float' ? (canTap ? 'แตะลูกโป่งได้เลย!' : 'ลูกโป่งกำลังแตก...') : phase === 'done' ? 'ปล่อยลูกโป่งอีกรอบ' : 'ปล่อยลูกโป่ง!'}</BigButton>}
-        <p className="text-center text-xs text-rose-900/60">ลูกโป่งแตกทีละลูก ลูกสุดท้ายที่เหลืออยู่คือคนที่ถูกเลือก</p>
-        {popped.length > 0 && (
-          <ol className="flex flex-wrap justify-center gap-1.5" aria-label="ลำดับที่แตก">
-            {popped.map((id, k) => {
-              const p = roster.find((x) => x.id === id)
-              return (
-                <li key={id} className="pop flex items-center gap-1 rounded-full bg-white py-0.5 pl-1 pr-3 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-pink-100">
-                  <span className="w-7"><Animal animal={p.animal} /></span><span className="text-pink-400">{k + 1}</span>{p.name}
-                </li>
-              )
-            })}
-          </ol>
-        )}
-      </div>
-
       {modal && winner && <ResultModal label="ลูกสุดท้ายที่รอด" winner={winner} n={n} againLabel="ปล่อยอีกรอบ" onAgain={again} onEliminate={eliminate} onBack={onBack} />}
     </Shell>
   )
@@ -315,7 +310,7 @@ function PopFx({ x, top, bw, color, animal, seed }) {
         {shreds.map((s, i) => (
           <span key={i} className="shred absolute text-xl font-black" style={{ color: i % 2 ? color : '#ffd966', '--dx': `${s.dx}px`, '--dy': `${s.dy}px`, fontSize: `${s.s}rem` }}>{s.ch}</span>
         ))}
-        <span className="pop-text absolute -left-6 -top-14 whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-sm font-extrabold text-rose-500 shadow ring-2 ring-pink-200">ป๊อป!</span>
+        <span className="pop-text absolute -left-6 -top-14 whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-sm font-extrabold text-[#e0466e] shadow ring-2 ring-pink-200">ป๊อป!</span>
       </div>
       <div className="cute-fall pointer-events-none absolute z-[5]" style={{ left: `${x}%`, top: `${top - 4}%`, width: `${bw * 0.78}%` }}>
         <Animal animal={animal} />

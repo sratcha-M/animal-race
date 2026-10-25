@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Shell, BigButton, ResultModal } from './MiniShell'
+import { Shell, BigButton, ResultModal, Panel } from './MiniShell'
 import Animal from './Animal'
 import { rand, sleep } from '../lib/rand'
 import { beep, fanfare } from '../lib/sound'
@@ -95,10 +95,30 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
   const parity = (i) => (n % 2 === 1 && i === n - 1 ? 2 : i % 2)
   const short = (name) => (name.length > (n > 6 ? 7 : 9) ? `${name.slice(0, n > 6 ? 6 : 8)}…` : name)
 
+  const side = (
+    <>
+      <p className="min-h-[1.75rem] text-center text-lg font-extrabold text-[#e0466e]" aria-live="polite">{msg}</p>
+      {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
+        : <BigButton onClick={throwDart} disabled={busy}>{busy ? 'ลูกดอกกำลังไป...' : 'ปา!'}</BigButton>}
+      <p className="-mt-1 text-center text-xs text-[#4f6a82]">เป้าเล็งส่ายไปมา กดปาตอนที่ชอบ แต่ลูกดอกก็ส่ายเองนิดหน่อย ผลเลยสุ่ม</p>
+      {hist.length > 0 && (
+        <Panel title="ปาโดนมาแล้ว" extra={hist.length}>
+          <ol className="flex flex-wrap gap-1.5" aria-label="ที่ผ่านมา">
+            {hist.map((p, k) => (
+              <li key={k} className="pop flex items-center gap-1 rounded-full border-2 border-[#24405a] bg-white py-0.5 pl-1 pr-3 text-sm font-bold">
+                <span className="w-7"><Animal animal={p.animal} /></span><span className="text-[#e0466e]">{k + 1}</span>{p.name}
+              </li>
+            ))}
+          </ol>
+        </Panel>
+      )}
+    </>
+  )
+
   return (
-    <Shell title="ปาเป้า" right={`${n} ช่อง`} onBack={onBack}>
+    <Shell title="ปาเป้า" right={`${n} ช่อง`} onBack={onBack} side={side}>
       {/* ผนังไม้ + กระดาน */}
-      <div className="relative mx-auto aspect-[1/1.1] w-full max-w-[26rem] select-none overflow-hidden rounded-[2rem] shadow-xl ring-4 ring-amber-900/25"
+      <div className="relative mx-auto aspect-[1/1.1] w-[min(100%,calc((100dvh-8rem)/1.1),38rem)] min-w-[15rem] select-none overflow-hidden rounded-[2rem] border-4 border-[#24405a] shadow-[0_8px_0_#24405a]"
            style={{ background: 'repeating-linear-gradient(90deg,#dba15c 0,#dba15c 62px,#c88a46 62px,#c88a46 64px), linear-gradient(180deg,rgba(255,255,255,.18),rgba(120,60,10,.18))', backgroundBlendMode: 'multiply' }}>
         {/* โน้ตสติกเกอร์ */}
         <div className="absolute left-3 top-3 z-[2] grid h-16 w-16 -rotate-6 place-items-center bg-yellow-200 shadow-md" style={{ boxShadow: '2px 4px 8px rgba(80,40,0,.3)' }}>
@@ -184,23 +204,7 @@ export default function Dart({ players, onBack, onNet, registerHandler }) {
         </svg>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        <p className="min-h-[1.75rem] text-center text-lg font-extrabold text-rose-500" aria-live="polite">{msg}</p>
-        {n < 2 ? <BigButton onClick={reset}>เริ่มใหม่ทุกคน</BigButton>
-          : <BigButton onClick={throwDart} disabled={busy}>{busy ? 'ลูกดอกกำลังไป...' : 'ปา!'}</BigButton>}
-        <p className="text-center text-xs text-rose-900/60">เป้าเล็งส่ายไปมา กดปาตอนที่ชอบ แต่ลูกดอกก็ส่ายเองนิดหน่อย ผลเลยสุ่ม</p>
-        {hist.length > 0 && (
-          <ol className="flex flex-wrap justify-center gap-1.5" aria-label="ที่ผ่านมา">
-            {hist.map((p, k) => (
-              <li key={k} className="pop flex items-center gap-1 rounded-full bg-white py-0.5 pl-1 pr-3 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-amber-200">
-                <span className="w-7"><Animal animal={p.animal} /></span><span className="text-amber-600">{k + 1}</span>{p.name}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
       {winner && <ResultModal label="ลูกดอกปักที่" winner={winner} n={n} againLabel="ปาอีกรอบ" onAgain={again} onEliminate={eliminate} onBack={onBack} />}
     </Shell>
   )
-}
+}

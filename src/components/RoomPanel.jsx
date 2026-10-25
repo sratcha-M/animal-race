@@ -24,10 +24,10 @@ export default function RoomPanel({ room, guests, onOpen, onClose }) {
   if (!room) {
     return (
       <div className="mx-auto mb-4 flex w-full max-w-sm flex-col items-center gap-1">
-        <button onClick={onOpen} className="w-full rounded-2xl bg-sky-500 px-4 py-2.5 font-bold text-white shadow hover:bg-sky-600 active:scale-95">
+        <button onClick={onOpen} className="w-full rounded-2xl border-[3px] border-[#24405a] bg-[#3ec1b0] px-4 py-2 font-bold text-white shadow-[0_4px_0_#24405a] hover:bg-[#52cfbf] active:translate-y-1 active:shadow-none">
           ชวนเพื่อนเข้าห้อง (เล่นจากมือถือ)
         </button>
-        {!ONLINE && <p className="text-center text-xs text-rose-900/50">ยังไม่ได้เชื่อมห้องออนไลน์ · ตอนนี้เปิดเข้าได้เฉพาะแท็บอื่นในเครื่องนี้</p>}
+        {!ONLINE && <p className="text-center text-xs text-[#4f6a82]">ยังไม่ได้เชื่อมห้องออนไลน์ · ตอนนี้เปิดเข้าได้เฉพาะแท็บอื่นในเครื่องนี้</p>}
       </div>
     )
   }
@@ -48,7 +48,7 @@ export default function RoomPanel({ room, guests, onOpen, onClose }) {
           </div>
           <div className="mt-2 flex items-center justify-between gap-2 text-sm">
             <span className="font-semibold text-slate-700">เพื่อนในห้อง {guests} คน</span>
-            <button onClick={onClose} className="text-rose-500 underline underline-offset-2">ปิดห้อง</button>
+            <button onClick={onClose} className="text-[#e0466e] underline underline-offset-2">ปิดห้อง</button>
           </div>
           {!ONLINE && <p className="mt-1 text-xs text-amber-700">โหมดทดสอบ: ยังไม่ได้เชื่อม Supabase จึงเข้าได้เฉพาะแท็บอื่นในเครื่องนี้</p>}
         </div>
